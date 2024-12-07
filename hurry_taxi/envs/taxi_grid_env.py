@@ -3,8 +3,8 @@ from gymnasium import spaces
 from gymnasium.error import DependencyNotInstalled
 import numpy as np
 
-from guaussian import Gaussian2D
-from position_randomizer import PositionRandomizer
+from hurry_taxi.utils.guaussian import Gaussian2D
+from hurry_taxi.utils.position_randomizer import PositionRandomizer
 
 class TaxiGridEnv(gym.Env):
     def __init__(self, grid_size=4, max_steps=100):
