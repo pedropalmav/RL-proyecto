@@ -1,7 +1,7 @@
 import gymnasium as gym
 from gymnasium import spaces
+from gymnasium.error import DependencyNotInstalled
 import numpy as np
-import pygame
 
 from guaussian import Gaussian2D
 from position_randomizer import PositionRandomizer
@@ -19,6 +19,13 @@ class TaxiGridEnv(gym.Env):
         mean = grid_size / 2
         self.gaussian = Gaussian2D([mean, mean], [[1, 0], [0, 1]])
 
+        self.render_mode = "human"
+        self.screen_width = 600
+        self.screen_height = 600
+        self.screen = None
+        self.clock = None
+        self.isopen = True
+
     def reset(self):
         self.steps = 0
         self.state = PositionRandomizer(self.grid_size).continuous_randomize()
@@ -28,4 +35,30 @@ class TaxiGridEnv(gym.Env):
         pass
 
     def render(self):
-        pass
+        try:
+            import pygame
+        except ImportError as e:
+            raise DependencyNotInstalled(
+                "pygame is not installed. Use `pip install pygame` to install it."
+            ) from e
+        
+        if self.screen is None:
+            pygame.init()
+            if self.render_mode == "human":
+                pygame.display.init()
+                self.screen = pygame.display.set_mode((self.screen_width, self.screen_height))
+            else:
+                self.screen = pygame.Surface((self.screen_width, self.screen_height))
+
+        if self.clock is None:
+            self.clock = pygame.time.Clock()
+    
+    def close(self):
+        if self.screen is not None:
+            import pygame
+
+            pygame.display.quit()
+            pygame.quit()
+            self.screen = None
+            self.clock = None
+            self.isopen = False
