@@ -6,7 +6,7 @@ import numpy as np
 from hurry_taxi.utils.guaussian import Gaussian2D
 from hurry_taxi.utils.position_randomizer import PositionRandomizer
 
-class TaxiGridEnv(gym.Env):
+class TaxiGrid(gym.Env):
     def __init__(self, grid_size=4, max_steps=100):
         self.grid_size = grid_size
         self.max_steps = max_steps
