@@ -12,7 +12,7 @@ class TaxiGridEnv(gym.Env):
         self.max_steps = max_steps
         self.action_space = spaces.Discrete(4) # Up, Down, Left, Right
         # TODO: Revisar este espacio de observación
-        self.observation_space = spaces.Box(low=0, high=1, shape=(2, ), dtype=np.float32)
+        self.observation_space = spaces.Box(low=0, high=grid_size, shape=(2, ), dtype=np.float32)
         self.state = None
 
         self.randomizer = PositionRandomizer(self.grid_size)
@@ -26,10 +26,10 @@ class TaxiGridEnv(gym.Env):
         self.clock = None
         self.isopen = True
 
-    def reset(self):
+    def reset(self, seed=None, options=None):
         self.steps = 0
         self.state = PositionRandomizer(self.grid_size).continuous_randomize()
-        return self.state, {}
+        return np.array(self.state, dtype=np.float32), {}
     
     def step(self, action):
         pass
