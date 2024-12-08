@@ -78,20 +78,37 @@ class TaxiGridEnv(gym.Env):
     def step(self, action):
         action_vector = self._action_to_vector[action]
         new_location = self.state[0] + action_vector
+        
+        self._handle_collision(new_location)
+        self._handle_passenger()
 
-        # TODO: Manejar colisiones
-        self._take_passenger()
         self._direction = action
         terminated = self.steps >= self.max_steps
 
         return self._get_obs(), self._get_reward(), terminated, False, self._get_info()
     
-    def _take_passenger(self):
-        if self._is_passenger_near() and not self._has_passenger:
+    def _handle_collision(self, new_location):
+        if not self._is_off_limits(new_location):
+            self._agent_location = new_location
+        # TODO: Colision con limite de calle
+        # TODO: Colision con otro auto
+        # TODO: Reward = -2
+
+    def _is_off_limits(self, location):
+        return location[0] < 0 or location[0] >= self.grid_size \
+            or location[1] < 0 or location[1] >= self.grid_size
+    
+    def _handle_passenger(self):
+        if self._is_target_near() and not self._has_passenger:
             self._has_passenger = 1
             self._target_location = self.randomizer.discrete_randomize()
+            # TODO: Reward = 1
+        elif self._is_target_near() and self._has_passenger:
+            self._has_passenger = 0
+            self._target_location = self.randomizer.discrete_randomize()
+            # TODO: Reward = 2
 
-    def _is_passenger_near(self):
+    def _is_target_near(self):
         return np.linalg.norm(self._agent_location - self._target_location, ord=1) == 1
 
 
