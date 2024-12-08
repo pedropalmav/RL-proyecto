@@ -6,13 +6,13 @@ import pygame
 def handle_player_input():
     from hurry_taxi.envs.taxi_grid import Actions
     keys = pygame.key.get_pressed()
-    if keys[pygame.K_RIGHT]:
+    if keys[pygame.K_RIGHT] or keys[pygame.K_d]:
         return Actions.right
-    if keys[pygame.K_UP]:
+    if keys[pygame.K_UP] or keys[pygame.K_w]:
         return Actions.up
-    if keys[pygame.K_LEFT]:
+    if keys[pygame.K_LEFT] or keys[pygame.K_a]:
         return Actions.left
-    if keys[pygame.K_DOWN]:
+    if keys[pygame.K_DOWN] or keys[pygame.K_s]:
         return Actions.down
     return Actions.nothing
 
