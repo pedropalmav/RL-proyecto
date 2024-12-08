@@ -42,11 +42,18 @@ class TaxiGridEnv(gym.Env):
         ))
 
         self._action_to_vector = {
-            Actions.right.value: np.array([1, 0]),
-            Actions.up.value: np.array([0, -1]),
-            Actions.left.value: np.array([-1, 0]),
-            Actions.down.value: np.array([0, 1]),
-            Actions.nothing.value: np.array([0, 0]),
+            Actions.right: np.array([1, 0]),
+            Actions.up: np.array([0, -1]),
+            Actions.left: np.array([-1, 0]),
+            Actions.down: np.array([0, 1]),
+            Actions.nothing: np.array([0, 0]),
+        }
+
+        self._direction_to_angle = {
+            Directions.north: 0,
+            Directions.east: 90,
+            Directions.south: 180,
+            Directions.west: -90,
         }
 
         self._init_randomizers()
@@ -79,7 +86,7 @@ class TaxiGridEnv(gym.Env):
 
         self.steps = 0
         self._agent_location = np.array(self.randomizer.discrete_randomize(), dtype=int)
-        self._direction = 0 # TODO: manejar según la dirección de la calle
+        self._direction = Directions.east # TODO: manejar según la dirección de la calle
         self._has_passenger = 0
         self._target_location = np.array(self.randomizer.discrete_randomize(), dtype=int)
 
@@ -96,13 +103,26 @@ class TaxiGridEnv(gym.Env):
         self._handle_collision(new_location)
         self._handle_passenger()
 
-        self._direction = action
+        self._direction = self._get_direction_from_action(action)
         terminated = self.steps >= self.max_steps or self._event == Events.collision
 
         if self.render_mode == "human":
             self.render()
 
         return self._get_obs(), self._get_reward(), terminated, False, self._get_info()
+    
+    def _get_direction_from_action(self, action):
+        match action:
+            case Actions.right:
+                return Directions.east
+            case Actions.up:
+                return Directions.north
+            case Actions.left:
+                return Directions.west
+            case Actions.down:
+                return Directions.south
+            case _:
+                return self._direction
     
     def _handle_collision(self, new_location):
         if self._agent_collides(new_location):
@@ -167,15 +187,9 @@ class TaxiGridEnv(gym.Env):
 
         if not hasattr(self, "_car_sprite"):
             self._car_sprite = pygame.image.load("hurry_taxi/assets/cars/taxi_small.png").convert_alpha()
-            self._car_sprite = pygame.transform.scale(
-                self._car_sprite, (int(pix_square_size), int(pix_square_size))
-            )
 
         if not hasattr(self, "_person_sprite"):
             self._person_sprite = pygame.image.load("hurry_taxi/assets/characters/character_black_blue.png").convert_alpha()
-            self._person_sprite = pygame.transform.scale(
-                self._person_sprite, (int(pix_square_size), int(pix_square_size))
-            )
 
         # Dibujar sprites
         target_position = (

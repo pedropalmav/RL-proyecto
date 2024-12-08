@@ -4,16 +4,17 @@ import hurry_taxi
 import pygame
 
 def handle_player_input():
+    from hurry_taxi.envs.taxi_grid import Actions
     keys = pygame.key.get_pressed()
     if keys[pygame.K_RIGHT]:
-        return 0
+        return Actions.right
     if keys[pygame.K_UP]:
-        return 1
+        return Actions.up
     if keys[pygame.K_LEFT]:
-        return 2
+        return Actions.left
     if keys[pygame.K_DOWN]:
-        return 3
-    return 4        
+        return Actions.down
+    return Actions.nothing
 
 
 env = gymnasium.make("hurry_taxi/TaxiGrid-v0", render_mode="human")
