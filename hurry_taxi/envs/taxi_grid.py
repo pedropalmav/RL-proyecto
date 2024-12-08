@@ -51,9 +51,9 @@ class TaxiGridEnv(gym.Env):
 
         self._direction_to_angle = {
             Directions.north: 0,
-            Directions.east: 90,
+            Directions.east: -90,
             Directions.south: 180,
-            Directions.west: -90,
+            Directions.west: 90,
         }
 
         self._init_randomizers()
@@ -74,7 +74,7 @@ class TaxiGridEnv(gym.Env):
         self.isopen = True
 
     def _get_obs(self):
-        return (self._agent_location, self._direction, self._has_passenger)
+        return (self._agent_location, self._direction.value, self._has_passenger)
     
     def _get_info(self):
         return {
@@ -202,7 +202,8 @@ class TaxiGridEnv(gym.Env):
             int(self._agent_location[0] * pix_square_size),
             int(self._agent_location[1] * pix_square_size),
         )
-        canvas.blit(self._car_sprite, agent_position)
+        rotated_car_sprite = pygame.transform.rotate(self._car_sprite, self._direction_to_angle[self._direction])
+        canvas.blit(rotated_car_sprite, agent_position)
 
         # Finally, add some gridlines
         for x in range(self.grid_size + 1):
