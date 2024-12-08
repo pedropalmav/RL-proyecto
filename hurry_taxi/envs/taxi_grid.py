@@ -19,6 +19,11 @@ class Directions(Enum):
     west = 2
     south = 3
 
+class Events(Enum):
+    takes_passenger = 0
+    leaves_passenger = 1
+    collision = 2
+
 class TaxiGridEnv(gym.Env):
     metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 4}
 
@@ -77,7 +82,7 @@ class TaxiGridEnv(gym.Env):
     
     def step(self, action):
         action_vector = self._action_to_vector[action]
-        new_location = self.state[0] + action_vector
+        new_location = self._agent_location + action_vector
         
         self._handle_collision(new_location)
         self._handle_passenger()
@@ -113,9 +118,7 @@ class TaxiGridEnv(gym.Env):
 
 
     def _get_reward(self):
-        # TODO: Toma pasajero: 1
-        # TODO: Deja pasajero: 2
-        # TODO: Choca: -2
+        match()
         return 0
 
     def render(self):
