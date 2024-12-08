@@ -30,11 +30,12 @@ class TaxiGridEnv(gym.Env):
         self.action_space = spaces.Discrete(4)
         self.observation_space = spaces.Tuple((
             spaces.Box(low=0, high=grid_size, shape=(2, ), dtype=int),
-            spaces.Discrete(4) # Direction of road: east, north, west, south
+            spaces.Discrete(4), # Direction of road: east, north, west, south
+            spaces.Discrete(2), # Has passenger: yes, no
         ))
         self.state = None
 
-        self._action_to_direction = {
+        self._action_to_vector = {
             Actions.right.value: np.array([1, 0]),
             Actions.up.value: np.array([0, 1]),
             Actions.left.value: np.array([-1, 0]),
@@ -57,17 +58,48 @@ class TaxiGridEnv(gym.Env):
         self.clock = None
         self.isopen = True
 
+    def _get_obs(self):
+        return (self._agent_location, self._direction, self._has_passenger)
+    
+    def _get_info(self):
+        return {}
+
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
 
         self.steps = 0
-        self.state = (np.array(self.randomizer.discrete_randomize(), dtype=int), 0)
+        self._agent_location = np.array(self.randomizer.discrete_randomize(), dtype=int)
+        self._direction = 0 # TODO: manejar según la dirección de la calle
+        self._has_passenger = 0
         self._target_location = self.randomizer.discrete_randomize()
 
-        return self.state, {}
+        return self._get_obs(), {}
     
     def step(self, action):
-        pass
+        action_vector = self._action_to_vector[action]
+        new_location = self.state[0] + action_vector
+
+        # TODO: Manejar colisiones
+        self._take_passenger()
+        self._direction = action
+        terminated = self.steps >= self.max_steps
+
+        return self._get_obs(), self._get_reward(), terminated, False, self._get_info()
+    
+    def _take_passenger(self):
+        if self._is_passenger_near() and not self._has_passenger:
+            self._has_passenger = 1
+            self._target_location = self.randomizer.discrete_randomize()
+
+    def _is_passenger_near(self):
+        return np.linalg.norm(self._agent_location - self._target_location, ord=1) == 1
+
+
+    def _get_reward(self):
+        # TODO: Toma pasajero: 1
+        # TODO: Deja pasajero: 2
+        # TODO: Choca: -2
+        return 0
 
     def render(self):
         try:
