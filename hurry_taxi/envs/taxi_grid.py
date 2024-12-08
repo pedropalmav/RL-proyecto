@@ -165,23 +165,30 @@ class TaxiGridEnv(gym.Env):
             self.window_size / self.grid_size
         )  # The size of a single grid square in pixels
 
-        # First we draw the target
-        print(self._target_location)
-        pygame.draw.rect(
-            canvas,
-            (255, 0, 0),
-            pygame.Rect(
-                pix_square_size * self._target_location,
-                (pix_square_size, pix_square_size),
-            ),
+        if not hasattr(self, "_car_sprite"):
+            self._car_sprite = pygame.image.load("hurry_taxi/assets/cars/taxi_small.png").convert_alpha()
+            self._car_sprite = pygame.transform.scale(
+                self._car_sprite, (int(pix_square_size), int(pix_square_size))
+            )
+
+        if not hasattr(self, "_person_sprite"):
+            self._person_sprite = pygame.image.load("hurry_taxi/assets/characters/character_black_blue.png").convert_alpha()
+            self._person_sprite = pygame.transform.scale(
+                self._person_sprite, (int(pix_square_size), int(pix_square_size))
+            )
+
+        # Dibujar sprites
+        target_position = (
+            int(self._target_location[0] * pix_square_size),
+            int(self._target_location[1] * pix_square_size),
         )
-        # Now we draw the agent
-        pygame.draw.circle(
-            canvas,
-            (0, 0, 255),
-            (self._agent_location + 0.5) * pix_square_size,
-            pix_square_size / 3,
+        canvas.blit(self._person_sprite, target_position)
+
+        agent_position = (
+            int(self._agent_location[0] * pix_square_size),
+            int(self._agent_location[1] * pix_square_size),
         )
+        canvas.blit(self._car_sprite, agent_position)
 
         # Finally, add some gridlines
         for x in range(self.grid_size + 1):
