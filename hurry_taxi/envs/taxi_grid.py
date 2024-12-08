@@ -13,15 +13,33 @@ class Actions(Enum):
     left = 2
     down = 3
 
+class Directions(Enum):
+    east = 0
+    north = 1
+    west = 2
+    south = 3
+
 class TaxiGridEnv(gym.Env):
-    def __init__(self, grid_size=5, max_steps=100):
+    metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 4}
+
+    def __init__(self, render_mode=None, grid_size=5, max_steps=100):
         self.grid_size = grid_size
         self.max_steps = max_steps
 
         # Up, Down, Left, Right
         self.action_space = spaces.Discrete(4)
-        self.observation_space = spaces.Box(low=0, high=grid_size, shape=(2, ), dtype=np.float32)
+        self.observation_space = spaces.Tuple((
+            spaces.Box(low=0, high=grid_size, shape=(2, ), dtype=int),
+            spaces.Discrete(4) # Direction of road: east, north, west, south
+        ))
         self.state = None
+
+        self._action_to_direction = {
+            Actions.right.value: np.array([1, 0]),
+            Actions.up.value: np.array([0, 1]),
+            Actions.left.value: np.array([-1, 0]),
+            Actions.down.value: np.array([0, -1]),
+        }
 
         self._init_randomizers()
         self._init_visualization()
@@ -40,9 +58,13 @@ class TaxiGridEnv(gym.Env):
         self.isopen = True
 
     def reset(self, seed=None, options=None):
+        super().reset(seed=seed)
+
         self.steps = 0
-        self.state = PositionRandomizer(self.grid_size).discrete_randomize()
-        return np.array(self.state, dtype=np.float32), {}
+        self.state = (np.array(self.randomizer.discrete_randomize(), dtype=int), 0)
+        self._target_location = self.randomizer.discrete_randomize()
+
+        return self.state, {}
     
     def step(self, action):
         pass
