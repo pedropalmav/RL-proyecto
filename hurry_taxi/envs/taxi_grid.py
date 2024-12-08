@@ -88,16 +88,20 @@ class TaxiGridEnv(gym.Env):
         self._handle_passenger()
 
         self._direction = action
-        terminated = self.steps >= self.max_steps
+        terminated = self.steps >= self.max_steps or self._event == Events.collision
 
         return self._get_obs(), self._get_reward(), terminated, False, self._get_info()
     
     def _handle_collision(self, new_location):
-        if not self._is_off_limits(new_location):
+        if self._agent_collides(new_location):
+            self._event = Events.collision
+        else:
             self._agent_location = new_location
-        # TODO: Colision con limite de calle
-        # TODO: Colision con otro auto
-        # TODO: Reward = -2
+
+    def _agent_collides(self, location):
+        # TODO: colisión con bordes de la calle
+        # TODO: colisión con otro auto
+        return self._is_off_limits(location)
 
     def _is_off_limits(self, location):
         return location[0] < 0 or location[0] >= self.grid_size \
