@@ -12,6 +12,7 @@ class Actions(Enum):
     up = 1
     left = 2
     down = 3
+    nothing = 4
 
 class Directions(Enum):
     east = 0
@@ -29,6 +30,7 @@ class TaxiGridEnv(gym.Env):
 
     def __init__(self, render_mode=None, grid_size=5, max_steps=100):
         self.grid_size = grid_size
+        self.window_size = 512
         self.max_steps = max_steps
 
         # Up, Down, Left, Right
@@ -41,9 +43,10 @@ class TaxiGridEnv(gym.Env):
 
         self._action_to_vector = {
             Actions.right.value: np.array([1, 0]),
-            Actions.up.value: np.array([0, 1]),
+            Actions.up.value: np.array([0, -1]),
             Actions.left.value: np.array([-1, 0]),
-            Actions.down.value: np.array([0, -1]),
+            Actions.down.value: np.array([0, 1]),
+            Actions.nothing.value: np.array([0, 0]),
         }
 
         self._init_randomizers()
@@ -58,6 +61,7 @@ class TaxiGridEnv(gym.Env):
         self.render_mode = "human"
         self.screen_width = 600
         self.screen_height = 600
+        self.window = None
         self.screen = None
         self.clock = None
         self.isopen = True
@@ -66,7 +70,9 @@ class TaxiGridEnv(gym.Env):
         return (self._agent_location, self._direction, self._has_passenger)
     
     def _get_info(self):
-        return {}
+        return {
+            "target": self._target_location
+        }
 
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
@@ -75,7 +81,10 @@ class TaxiGridEnv(gym.Env):
         self._agent_location = np.array(self.randomizer.discrete_randomize(), dtype=int)
         self._direction = 0 # TODO: manejar según la dirección de la calle
         self._has_passenger = 0
-        self._target_location = self.randomizer.discrete_randomize()
+        self._target_location = np.array(self.randomizer.discrete_randomize(), dtype=int)
+
+        if self.render_mode == "human":
+            self.render()
 
         return self._get_obs(), {}
     
@@ -89,6 +98,9 @@ class TaxiGridEnv(gym.Env):
 
         self._direction = action
         terminated = self.steps >= self.max_steps or self._event == Events.collision
+
+        if self.render_mode == "human":
+            self.render()
 
         return self._get_obs(), self._get_reward(), terminated, False, self._get_info()
     
@@ -110,11 +122,11 @@ class TaxiGridEnv(gym.Env):
     def _handle_passenger(self):
         if self._is_target_near() and not self._has_passenger:
             self._has_passenger = 1
-            self._target_location = self.randomizer.discrete_randomize()
+            self._target_location = np.array(self.randomizer.discrete_randomize(), dtype=int)
             self._event = Events.takes_passenger
         elif self._is_target_near() and self._has_passenger:
             self._has_passenger = 0
-            self._target_location = self.randomizer.discrete_randomize()
+            self._target_location = np.array(self.randomizer.discrete_randomize(), dtype=int)
             self._event = Events.leaves_passenger
 
     def _is_target_near(self):
@@ -140,16 +152,68 @@ class TaxiGridEnv(gym.Env):
                 "pygame is not installed. Use `pip install pygame` to install it."
             ) from e
         
-        if self.screen is None:
+        if self.window is None and self.render_mode == "human":
             pygame.init()
-            if self.render_mode == "human":
-                pygame.display.init()
-                self.screen = pygame.display.set_mode((self.screen_width, self.screen_height))
-            else:
-                self.screen = pygame.Surface((self.screen_width, self.screen_height))
-
-        if self.clock is None:
+            pygame.display.init()
+            self.window = pygame.display.set_mode((self.window_size, self.window_size))
+        if self.clock is None and self.render_mode == "human":
             self.clock = pygame.time.Clock()
+
+        canvas = pygame.Surface((self.window_size, self.window_size))
+        canvas.fill((255, 255, 255))
+        pix_square_size = (
+            self.window_size / self.grid_size
+        )  # The size of a single grid square in pixels
+
+        # First we draw the target
+        print(self._target_location)
+        pygame.draw.rect(
+            canvas,
+            (255, 0, 0),
+            pygame.Rect(
+                pix_square_size * self._target_location,
+                (pix_square_size, pix_square_size),
+            ),
+        )
+        # Now we draw the agent
+        pygame.draw.circle(
+            canvas,
+            (0, 0, 255),
+            (self._agent_location + 0.5) * pix_square_size,
+            pix_square_size / 3,
+        )
+
+        # Finally, add some gridlines
+        for x in range(self.grid_size + 1):
+            pygame.draw.line(
+                canvas,
+                0,
+                (0, pix_square_size * x),
+                (self.window_size, pix_square_size * x),
+                width=3,
+            )
+            pygame.draw.line(
+                canvas,
+                0,
+                (pix_square_size * x, 0),
+                (pix_square_size * x, self.window_size),
+                width=3,
+            )
+
+        if self.render_mode == "human":
+            # The following line copies our drawings from `canvas` to the visible window
+            self.window.blit(canvas, canvas.get_rect())
+            pygame.event.pump()
+            pygame.display.update()
+
+            # We need to ensure that human-rendering occurs at the predefined framerate.
+            # The following line will automatically add a delay to
+            # keep the framerate stable.
+            self.clock.tick(self.metadata["render_fps"])
+        else:  # rgb_array
+            return np.transpose(
+                np.array(pygame.surfarray.pixels3d(canvas)), axes=(1, 0, 2)
+            )
     
     def close(self):
         if self.screen is not None:
