@@ -32,7 +32,7 @@ class TaxiGridEnv(gym.Env):
 
     def __init__(self, render_mode=None, max_steps=100):
         self.grid_size = 25
-        self.window_size = 512
+        self.window_size = 1024
         self.max_steps = max_steps
         ##grid
         self.map = map
@@ -186,15 +186,15 @@ class TaxiGridEnv(gym.Env):
         self.road_sprite = {
             'horizontal': pygame.image.load(road_folder+'horizontal_road.png').convert_alpha(),
             'vertical': pygame.image.load(road_folder+'vertical_road.png').convert_alpha(),
-            'curve_up_right': pygame.image.load(road_folder+'curve01.png').convert_alpha(),
-            'curve_up_left': pygame.image.load(road_folder+'curve02.png').convert_alpha(),
-            'curve_down_right': pygame.image.load(road_folder+'curve03.png').convert_alpha(),
-            'curve_down_left': pygame.image.load(road_folder+'curve04.png').convert_alpha(),
+            'curve_up_right': pygame.image.load(road_folder+'curve03.png').convert_alpha(),
+            'curve_up_left': pygame.image.load(road_folder+'curve04.png').convert_alpha(),
+            'curve_down_right': pygame.image.load(road_folder+'curve01.png').convert_alpha(),
+            'curve_down_left': pygame.image.load(road_folder+'curve02.png').convert_alpha(),
             'crossroad': pygame.image.load(road_folder+'crossroad.png').convert_alpha(),
-            'T_down': pygame.image.load(road_folder+'t_intersection03.png').convert_alpha(),
-            'T_up': pygame.image.load(road_folder+'t_intersection02.png').convert_alpha(),
-            'T_right': pygame.image.load(road_folder+'t_intersection04.png').convert_alpha(),
-            'T_left': pygame.image.load(road_folder+'t_intersection01.png').convert_alpha(),
+            'T_down': pygame.image.load(road_folder+'t_intersection02.png').convert_alpha(),
+            'T_up': pygame.image.load(road_folder+'t_intersection03.png').convert_alpha(),
+            'T_right': pygame.image.load(road_folder+'t_intersection01.png').convert_alpha(),
+            'T_left': pygame.image.load(road_folder+'t_intersection04.png').convert_alpha(),
             'end_down': pygame.image.load(road_folder+'end_road01.png').convert_alpha(),
             'end_up': pygame.image.load(road_folder+'end_road02.png').convert_alpha(),
             'end_right': pygame.image.load(road_folder+'end_road03.png').convert_alpha(),
@@ -205,7 +205,7 @@ class TaxiGridEnv(gym.Env):
         canvas.fill((255, 255, 255))
         pix_square_size = (
             self.window_size / self.grid_size
-        )  # The size of a single grid square in pixels
+        )
 
         if not hasattr(self, "_car_sprite"):
             self._car_sprite = pygame.image.load("hurry_taxi/assets/cars/taxi_small.png").convert_alpha()
@@ -216,57 +216,39 @@ class TaxiGridEnv(gym.Env):
         for x in range(self.grid_size):
             for y in range(self.grid_size):
                 position = (int(x * pix_square_size), int(y * pix_square_size))
-                if self.map[x][y] == 1:  # Road
+                if self.map[y][x] == 1:  # Road
                     connections = self.get_connections(x, y)
                     sprite = self.get_sprite(connections)
+                    sprite = pygame.transform.scale(sprite, (int(pix_square_size), int(pix_square_size)))
                     if sprite:
                         canvas.blit(sprite, position)
-                else:  # Building
+                else:
                     canvas.blit(self.road_sprite['building'], position)
 
 
-        # Dibujar sprites
         target_position = (
             int(self._target_location[0] * pix_square_size),
             int(self._target_location[1] * pix_square_size),
         )
-        canvas.blit(self._person_sprite, target_position)
+
+        person_sprite = pygame.transform.scale(self._person_sprite, (int(pix_square_size), int(pix_square_size)))
+        canvas.blit(person_sprite, target_position)
 
         agent_position = (
             int(self._agent_location[0] * pix_square_size),
             int(self._agent_location[1] * pix_square_size),
         )
         rotated_car_sprite = pygame.transform.rotate(self._car_sprite, self._direction_to_angle[self._direction])
-        canvas.blit(rotated_car_sprite, agent_position)
-
-        # Finally, add some gridlines
-        for x in range(self.grid_size + 1):
-            pygame.draw.line(
-                canvas,
-                0,
-                (0, pix_square_size * x),
-                (self.window_size, pix_square_size * x),
-                width=3,
-            )
-            pygame.draw.line(
-                canvas,
-                0,
-                (pix_square_size * x, 0),
-                (pix_square_size * x, self.window_size),
-                width=3,
-            )
+        car_sprite = pygame.transform.scale(rotated_car_sprite, (int(pix_square_size), int(pix_square_size)))
+        canvas.blit(car_sprite, agent_position)
         
         if self.render_mode == "human":
-            # The following line copies our drawings from `canvas` to the visible window
             self.window.blit(canvas, canvas.get_rect())
             pygame.event.pump()
             pygame.display.update()
 
-            # We need to ensure that human-rendering occurs at the predefined framerate.
-            # The following line will automatically add a delay to
-            # keep the framerate stable.
             self.clock.tick(self.metadata["render_fps"])
-        else:  # rgb_array
+        else:
             return np.transpose(
                 np.array(pygame.surfarray.pixels3d(canvas)), axes=(1, 0, 2)
             )
@@ -285,10 +267,15 @@ class TaxiGridEnv(gym.Env):
     def get_sprite(self, connections):
         road_type = self.get_road_type(connections)
         return self.road_sprite.get(road_type)
+    
     def get_road_type(self, connections):
         connection_count = sum(connections.values())
         if connection_count == 2:
-            if connections["up"] and connections["right"]:
+            if connections["left"] and connections["right"]:
+                return "horizontal"
+            elif connections["up"] and connections["down"]:
+                return "vertical"
+            elif connections["up"] and connections["right"]:
                 return "curve_up_right"
             elif connections["up"] and connections["left"]:
                 return "curve_up_left"
@@ -296,10 +283,6 @@ class TaxiGridEnv(gym.Env):
                 return "curve_down_right"
             elif connections["down"] and connections["left"]:
                 return "curve_down_left"
-            elif connections["up"] and connections["down"]:
-                return "vertical"
-            elif connections["left"] and connections["right"]:
-                return "horizontal"
         elif connection_count == 4:
             return "crossroad"  # Connected to all 4 sides
         elif connection_count == 3:
@@ -324,16 +307,13 @@ class TaxiGridEnv(gym.Env):
 
     def get_connections(self, x, y):
         neighbors = {
-            "up": (x - 1, y),
-            "down": (x + 1, y),
-            "left": (x, y - 1),
-            "right": (x, y + 1)
+            "up": (x, y - 1),
+            "down": (x, y + 1),
+            "left": (x - 1, y),
+            "right": (x + 1, y)
         }
         connections = {
-            direction: self.map[nx][ny] if 0 <= nx < self.grid_size and 0 <= ny < self.grid_size else 0
+            direction: self.map[ny][nx] if 0 <= nx < self.grid_size and 0 <= ny < self.grid_size else 0
             for direction, (nx, ny) in neighbors.items()
         }
         return connections
-
-
-            
