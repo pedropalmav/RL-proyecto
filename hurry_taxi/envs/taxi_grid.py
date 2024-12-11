@@ -216,10 +216,8 @@ class TaxiGridEnv(gym.Env):
         sprite_width, sprite_height = background_sprite.get_size()
         canvas_width, canvas_height = canvas.get_size()
 
-        # Iterar sobre el área del canvas en una cuadrícula
         for x in range(0, canvas_width, sprite_width):
             for y in range(0, canvas_height, sprite_height):
-                # Dibujar el sprite en la posición actual
                 canvas.blit(background_sprite, (x, y))
 
         if not hasattr(self, "_car_sprite"):
