@@ -34,7 +34,7 @@ class TaxiGridEnv(gym.Env):
         self.grid_size = 25
         self.window_size = 1024
         self.max_steps = max_steps
-        ##grid
+        # TODO: refactorizar para utilizar numpy
         self.map = map
         # Up, Down, Left, Right
         self.action_space = spaces.Discrete(4)
@@ -89,6 +89,8 @@ class TaxiGridEnv(gym.Env):
 
         self.steps = 0
         self._agent_location = np.array(self.randomizer.discrete_randomize(), dtype=int)
+        while self._is_out_of_road(self._agent_location):
+            self._agent_location = np.array(self.randomizer.discrete_randomize(), dtype=int)
         self._direction = Directions.east # TODO: manejar según la dirección de la calle
         self._has_passenger = 0
         self._target_location = np.array(self.randomizer.discrete_randomize(), dtype=int)
@@ -136,7 +138,10 @@ class TaxiGridEnv(gym.Env):
     def _agent_collides(self, location):
         # TODO: colisión con bordes de la calle
         # TODO: colisión con otro auto
-        return self._is_off_limits(location)
+        return self._is_off_limits(location) or self._is_out_of_road(location)
+    
+    def _is_out_of_road(self, location):
+        return self.map[location[1]][location[0]] == 0
 
     def _is_off_limits(self, location):
         return location[0] < 0 or location[0] >= self.grid_size \
@@ -284,7 +289,7 @@ class TaxiGridEnv(gym.Env):
             elif connections["down"] and connections["left"]:
                 return "curve_down_left"
         elif connection_count == 4:
-            return "crossroad"  # Connected to all 4 sides
+            return "crossroad" 
         elif connection_count == 3:
             if not connections["up"]:
                 return "T_down"
