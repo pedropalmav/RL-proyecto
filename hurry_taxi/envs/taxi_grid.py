@@ -204,13 +204,23 @@ class TaxiGridEnv(gym.Env):
             'end_up': pygame.image.load(road_folder+'end_road02.png').convert_alpha(),
             'end_right': pygame.image.load(road_folder+'end_road03.png').convert_alpha(),
             'end_left': pygame.image.load(road_folder+'end_road04.png').convert_alpha(),
-            'building': pygame.image.load('hurry_taxi/assets/grass.png').convert_alpha(),
+            'grass': pygame.image.load('hurry_taxi/assets/grass.png').convert_alpha(),
         }
         canvas = pygame.Surface((self.window_size, self.window_size))
         canvas.fill((255, 255, 255))
         pix_square_size = (
             self.window_size / self.grid_size
         )
+
+        background_sprite = pygame.transform.scale(self.road_sprite['grass'], (int(pix_square_size), int(pix_square_size)))
+        sprite_width, sprite_height = background_sprite.get_size()
+        canvas_width, canvas_height = canvas.get_size()
+
+        # Iterar sobre el área del canvas en una cuadrícula
+        for x in range(0, canvas_width, sprite_width):
+            for y in range(0, canvas_height, sprite_height):
+                # Dibujar el sprite en la posición actual
+                canvas.blit(background_sprite, (x, y))
 
         if not hasattr(self, "_car_sprite"):
             self._car_sprite = pygame.image.load("hurry_taxi/assets/cars/taxi_small.png").convert_alpha()
@@ -227,8 +237,6 @@ class TaxiGridEnv(gym.Env):
                     sprite = pygame.transform.scale(sprite, (int(pix_square_size), int(pix_square_size)))
                     if sprite:
                         canvas.blit(sprite, position)
-                else:
-                    canvas.blit(self.road_sprite['building'], position)
 
 
         target_position = (
