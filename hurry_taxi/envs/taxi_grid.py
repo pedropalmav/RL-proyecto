@@ -42,28 +42,21 @@ class TaxiGridEnv(gym.Env):
         # TODO: refactorizar para utilizar numpy
         self.map = map
         # Up, Down, Left, Right
-        self.action_space = spaces.Discrete(4)
+        self.action_space = spaces.MultiDiscrete([5] * self.agents_number)
         
-        self.observation_space = spaces.Tuple(
-            tuple(
-                spaces.Tuple((
-                    spaces.Box(low=0, high=self.grid_size, shape=(2, ), dtype=int), # Taxi location
-                    spaces.Discrete(4), # Direction of taxi: east, north, west, south
-                    spaces.Discrete(2), # Has passenger: yes, no
-                    spaces.Box(low=0, high=self.grid_size, shape=(2, ), dtype=int), # Passenger destination
-                )) for _ in range(self.agents_number)
-            ) + tuple(
-                spaces.Tuple((
-                    spaces.Box(low=0, high=self.grid_size, shape=(2, ), dtype=int), # NPC location
-                    spaces.Discrete(4), # Direction of NPC: east, north, west, south
-                )) for _ in range(self.number_of_npcs)
-            ) + tuple(
-                spaces.Tuple((
-                    spaces.Discrete(2), # Passenger exists
-                    spaces.Box(low=0, high=self.grid_size, shape=(2, ), dtype=int), # Passenger location
-                )) for _ in range(self.max_passengers)
-            )
+        obs_dim = (
+            2 * self.agents_number +  # Agent locations
+            self.agents_number +     # Agent directions
+            self.agents_number +     # Agent passenger status
+            2 * self.agents_number + # Passenger destinations
+            2 * self.number_of_npcs + # NPC locations
+            self.number_of_npcs +     # NPC directions
+            self.max_passengers +     # Passenger status (waiting or not)
+            2 * self.max_passengers   # Passenger locations
         )
+      
+        self.observation_space = spaces.Box(low=0, high=self.grid_size, shape=(obs_dim,), dtype=np.float32)
+
 
         self._action_to_vector = {
             Actions.right: np.array([1, 0]),
@@ -99,19 +92,21 @@ class TaxiGridEnv(gym.Env):
         self.isopen = True
 
     def _get_obs(self):
-        return tuple(
-            (agent["location"], agent["direction"].value, agent["has_passenger"], agent["passenger"]["destination"] if agent["has_passenger"] else np.array([0, 0]))
-            for agent in self._agents
-        ) + tuple(
-            (npc["location"], npc["direction"].value)
-            for npc in self.npcs
-        ) + tuple(
-            (1, passenger["location"])
-            for passenger in self._waiting_passengers
-        ) + tuple(
-            (0, np.array([0, 0]))
-            for _ in range(self.max_passengers - len(self._waiting_passengers))
-        )
+        # Flatten all observations into a single array
+        obs = np.concatenate([
+            np.array([agent["location"] for agent in self._agents]).flatten(),
+            np.array([agent["direction"].value for agent in self._agents]),
+            np.array([agent["has_passenger"] for agent in self._agents]),
+            np.array([agent["passenger"]["destination"] if agent["has_passenger"] else [0, 0] for agent in self._agents]).flatten(),
+            np.array([npc["location"] for npc in self.npcs]).flatten(),
+            np.array([npc["direction"].value for npc in self.npcs]),
+            np.array([1 if idx < len(self._waiting_passengers) else 0 for idx in range(self.max_passengers)]),
+            np.array([self._waiting_passengers[idx]["location"] if idx < len(self._waiting_passengers) else [0, 0]
+                  for idx in range(self.max_passengers)]).flatten()
+        ], dtype=np.float32)
+        return obs
+
+
     
     def _get_info(self):
         return {
@@ -212,6 +207,7 @@ class TaxiGridEnv(gym.Env):
         self._events = [None] * self.agents_number
         for i in range(self.agents_number):
             agent_action = action[i]
+            agent_action = Actions(agent_action)
             action_vector = self._action_to_vector[agent_action]
             new_location = self._agents[i]["location"] + action_vector
             self._handle_collision(i, new_location)
