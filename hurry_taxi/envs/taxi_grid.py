@@ -155,8 +155,7 @@ class TaxiGridEnv(gym.Env):
             self._agent_location = new_location
 
     def _agent_collides(self, location):
-        # TODO: colisión con otro auto
-        return self._is_off_limits(location) or self._is_out_of_road(location)
+        return self._is_off_limits(location) or self._is_out_of_road(location) or self._hits_other_car(location)
     
     def _hits_other_car(self, location):
         for npc in self.npcs:
