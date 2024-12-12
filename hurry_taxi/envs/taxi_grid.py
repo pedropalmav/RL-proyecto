@@ -92,10 +92,8 @@ class TaxiGridEnv(gym.Env):
         super().reset(seed=seed)
 
         self.steps = 0
-        self._agent_location = np.array(self.randomizer.discrete_randomize(), dtype=int)
-        while self._is_out_of_road(self._agent_location):
-            self._agent_location = np.array(self.randomizer.discrete_randomize(), dtype=int)
-        self._direction = Directions.east # TODO: manejar según la dirección de la calle
+        self._agent_location = self._get_location_on_road()
+        self._direction = self._get_valid_direction(self._agent_location)
         self._has_passenger = 0
         self._target_location = np.array(self.randomizer.discrete_randomize(), dtype=int)
 
@@ -105,6 +103,21 @@ class TaxiGridEnv(gym.Env):
             self.render()
 
         return self._get_obs(), {}
+    
+    def _get_location_on_road(self):
+        while True:
+            location = np.array(self.randomizer.discrete_randomize(), dtype=int)
+            if not self._is_out_of_road(location):
+                return location
+            
+    def _get_valid_direction(self, location):
+        connections = self.get_connections(location[0], location[1])
+        available_directions = []
+        for direction, connected in connections.items():
+            if connected:
+                direction = self._get_direction_from_action(Actions[direction])
+                available_directions.append(direction)
+        return np.random.choice(available_directions)
     
     def _generate_npcs(self):
         self.npcs = []
@@ -116,7 +129,7 @@ class TaxiGridEnv(gym.Env):
 
             self.npcs.append({
                 "location": npc_location,
-                "direction": np.random.choice(list(Directions)),
+                "direction": self._get_valid_direction(npc_location),
                 "color": npc_color
             })
     
