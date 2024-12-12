@@ -5,6 +5,7 @@ from hurry_taxi.envs.taxi_grid import Actions
 import pygame
 
 def handle_player_input():
+    global quit_game
     keys = pygame.key.get_pressed()
     action = [Actions.nothing, Actions.nothing]
     if keys[pygame.K_RIGHT]:
@@ -23,13 +24,21 @@ def handle_player_input():
         action[0] = Actions.left
     if keys[pygame.K_s]:
         action[0] = Actions.down
+    if keys[pygame.K_ESCAPE]:
+        quit_game = True
+
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            quit_game = True
+
     return action
 
 
+quit_game = False
 env = gymnasium.make("hurry_taxi/TaxiGrid-v0", render_mode="human")
 observation, info = env.reset()
 done = False
-while not done:
+while not done and not quit_game:
     action = handle_player_input()
     observation, reward, done, _, info = env.step(action)
 env.close()
