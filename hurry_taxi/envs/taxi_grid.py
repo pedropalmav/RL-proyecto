@@ -158,6 +158,12 @@ class TaxiGridEnv(gym.Env):
         # TODO: colisión con otro auto
         return self._is_off_limits(location) or self._is_out_of_road(location)
     
+    def _hits_other_car(self, location):
+        for npc in self.npcs:
+            if np.array_equal(npc["location"], location) and npc["direction"] == self._direction:
+                return True
+        return False
+    
     def _is_out_of_road(self, location):
         return self.map[location[1]][location[0]] == 0
 
