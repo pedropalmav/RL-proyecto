@@ -85,17 +85,21 @@ class TaxiGridEnv(gym.Env):
     
     def _get_info(self):
         return {
-            "target": self._target_location
+            "waiting_passengers": len(self._waiting_passengers),
         }
 
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
 
-        self.steps = 0
+        self.step_count = 0
+        self._passenger_id = 0
+
         self._agent_location = self._get_location_on_road()
         self._direction = self._get_valid_direction(self._agent_location)
+        self._agent_passenger = None
         self._has_passenger = 0
-        self._target_location = self._get_valid_target_location()
+        
+        self._waiting_passengers = [self._generate_passenger()]
 
         self._generate_npcs()
 
@@ -129,6 +133,18 @@ class TaxiGridEnv(gym.Env):
         connections = self.get_connections(location[0], location[1])
         return any(connections.values()) and self._is_out_of_road(location)
     
+    def _generate_passenger(self):
+        passenger_id = self._passenger_id
+        self._passenger_id += 1
+        return {
+            "id": passenger_id,
+            "location": self._get_valid_target_location(),
+            "destiny": self._get_valid_target_location(),
+            "shirt": np.random.choice(["white", "red", "blue", "green"]),
+            "hair": np.random.choice(["black", "blonde", "brown"]),
+            # TODO: Handle direction here
+        }
+    
     def _generate_npcs(self):
         self.npcs = []
         for _ in range(self.number_of_npcs):
@@ -149,13 +165,13 @@ class TaxiGridEnv(gym.Env):
         new_location = self._agent_location + action_vector
         
         self._handle_collision(new_location)
-        self._handle_passenger()
+        self._handle_passengers()
 
         self._move_npcs()
 
         self._direction = self._get_direction_from_action(action)
-        self.steps += 1
-        terminated = self.steps >= self.max_steps or self._event == Events.collision
+        self.step_count += 1
+        terminated = self.step_count >= self.max_steps or self._event == Events.collision
 
         if self.render_mode == "human":
             self.render()
@@ -230,18 +246,28 @@ class TaxiGridEnv(gym.Env):
         return location[0] < 0 or location[0] >= self.grid_size \
             or location[1] < 0 or location[1] >= self.grid_size
     
-    def _handle_passenger(self):
-        if self._is_target_near() and not self._has_passenger:
-            self._has_passenger = 1
-            self._target_location = self._get_valid_target_location()
-            self._event = Events.takes_passenger
-        elif self._is_target_near() and self._has_passenger:
+    def _handle_passengers(self):
+        picked_passengers = []
+        for passenger in self._waiting_passengers:
+            if self._is_near(passenger["location"]) and not self._has_passenger:
+                self._has_passenger = 1
+                self._agent_passenger = passenger
+                self._event = Events.takes_passenger
+                picked_passengers.append(passenger)
+
+        self._waiting_passengers = [passenger for passenger in self._waiting_passengers if passenger not in picked_passengers]
+
+        if self._has_passenger and self._is_near(self._agent_passenger["destiny"]):
             self._has_passenger = 0
-            self._target_location = self._get_valid_target_location()
+            self._agent_passenger = None
             self._event = Events.leaves_passenger
 
-    def _is_target_near(self):
-        return np.linalg.norm(self._agent_location - self._target_location, ord=1) == 1
+        # TODO: Manejar esto con poisson?
+        if self.step_count % 50 == 0:
+            self._waiting_passengers.append(self._generate_passenger())
+
+    def _is_near(self, location):
+        return np.linalg.norm(self._agent_location - location, ord=1) == 1
 
 
     def _get_reward(self):
@@ -274,10 +300,7 @@ class TaxiGridEnv(gym.Env):
         self._render_background()
         self._render_roads()
 
-        if not hasattr(self, "_person_sprite"):
-            self._person_sprite = pygame.image.load("hurry_taxi/assets/characters/character_black_blue.png").convert_alpha()
-
-        self._render_passenger()
+        self._render_passengers()
 
         # TODO: Render agents
         agent_position = (
@@ -299,16 +322,22 @@ class TaxiGridEnv(gym.Env):
             return np.transpose(
                 np.array(pygame.surfarray.pixels3d(self.canvas)), axes=(1, 0, 2)
             )
+        
+    def _render_passengers(self):
+        for passenger in self._waiting_passengers:
+            self._render_passenger(passenger)
 
-    def _render_passenger(self):
+    def _render_passenger(self, passenger):
         tile_position = (
-            int(self._target_location[0] * self.pix_square_size),
-            int(self._target_location[1] * self.pix_square_size),
+            int(passenger["location"][0] * self.pix_square_size),
+            int(passenger["location"][1] * self.pix_square_size),
         )
-        connections = [direction for direction, connected in self.get_connections(*self._target_location).items() if connected]
+        # TODO: mover esto al generador de pasajeros
+        connections = [direction for direction, connected in self.get_connections(*passenger["location"]).items() if connected]
         direction = np.random.choice(connections)
+
         passenger_position = self._get_passenger_position(tile_position, direction)
-        person_sprite = pygame.transform.rotate(self._person_sprite, self._get_passenger_angle(direction))
+        person_sprite = pygame.transform.rotate(self.character_sprites[f"{passenger['hair']}_{passenger['shirt']}"], self._get_passenger_angle(direction))
         person_sprite = pygame.transform.scale(person_sprite, (int(self.pix_square_size) / 2, int(self.pix_square_size) / 2))
         self.canvas.blit(person_sprite, passenger_position)
 
@@ -373,6 +402,7 @@ class TaxiGridEnv(gym.Env):
         assets_folder = os.path.join("hurry_taxi", "assets")
         road_folder = os.path.join(assets_folder, "roads")
         cars_folder = os.path.join(assets_folder, "cars")
+        characters_folder = os.path.join(assets_folder, "characters")
         self.road_sprite = {
             'horizontal': pygame.image.load(os.path.join(road_folder, 'horizontal_road.png')).convert_alpha(),
             'vertical': pygame.image.load(os.path.join(road_folder, 'vertical_road.png')).convert_alpha(),
@@ -397,6 +427,20 @@ class TaxiGridEnv(gym.Env):
             'red': pygame.image.load(os.path.join(cars_folder, 'car_red_small.png')).convert_alpha(),
             'blue': pygame.image.load(os.path.join(cars_folder, 'car_blue_small.png')).convert_alpha(),
             'green': pygame.image.load(os.path.join(cars_folder, 'car_green_small.png')).convert_alpha(),
+        }
+        self.character_sprites = {
+            "black_blue": pygame.image.load(os.path.join(characters_folder, "character_black_blue.png")).convert_alpha(),
+            "black_red": pygame.image.load(os.path.join(characters_folder, "character_black_red.png")).convert_alpha(),
+            "black_green": pygame.image.load(os.path.join(characters_folder, "character_black_green.png")).convert_alpha(),
+            "black_white": pygame.image.load(os.path.join(characters_folder, "character_black_white.png")).convert_alpha(),
+            "blonde_blue": pygame.image.load(os.path.join(characters_folder, "character_blonde_blue.png")).convert_alpha(),
+            "blonde_red": pygame.image.load(os.path.join(characters_folder, "character_blonde_red.png")).convert_alpha(),
+            "blonde_green": pygame.image.load(os.path.join(characters_folder, "character_blonde_green.png")).convert_alpha(),
+            "blonde_white": pygame.image.load(os.path.join(characters_folder, "character_blonde_white.png")).convert_alpha(),
+            "brown_blue": pygame.image.load(os.path.join(characters_folder, "character_brown_blue.png")).convert_alpha(),
+            "brown_red": pygame.image.load(os.path.join(characters_folder, "character_brown_red.png")).convert_alpha(),
+            "brown_green": pygame.image.load(os.path.join(characters_folder, "character_brown_green.png")).convert_alpha(),
+            "brown_white": pygame.image.load(os.path.join(characters_folder, "character_brown_white.png")).convert_alpha(),
         }
 
     def _render_car(self, original_sprite, tile_position, direction):
