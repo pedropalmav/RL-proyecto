@@ -1,8 +1,8 @@
 import gymnasium as gym
-from gymnasium import spaces
-from gymnasium.error import DependencyNotInstalled
 import numpy as np
+from gymnasium import spaces
 import pygame
+import os
 from enum import Enum
 
 from hurry_taxi.utils.guaussian import Gaussian2D
@@ -303,35 +303,35 @@ class TaxiGridEnv(gym.Env):
             )
         
     def _load_assets(self):
-        # TODO: handle with os.path.join
-        road_folder = "hurry_taxi/assets/roads/"
-        cars_folder = "hurry_taxi/assets/cars/"
+        assets_folder = os.path.join("hurry_taxi", "assets")
+        road_folder = os.path.join(assets_folder, "roads")
+        cars_folder = os.path.join(assets_folder, "cars")
         self.road_sprite = {
-            'horizontal': pygame.image.load(road_folder + 'horizontal_road.png').convert_alpha(),
-            'vertical': pygame.image.load(road_folder + 'vertical_road.png').convert_alpha(),
-            'curve_up_right': pygame.image.load(road_folder + 'curve03.png').convert_alpha(),
-            'curve_up_left': pygame.image.load(road_folder + 'curve04.png').convert_alpha(),
-            'curve_down_right': pygame.image.load(road_folder + 'curve01.png').convert_alpha(),
-            'curve_down_left': pygame.image.load(road_folder + 'curve02.png').convert_alpha(),
-            'crossroad': pygame.image.load(road_folder + 'crossroad.png').convert_alpha(),
-            'T_down': pygame.image.load(road_folder + 't_intersection02.png').convert_alpha(),
-            'T_up': pygame.image.load(road_folder + 't_intersection03.png').convert_alpha(),
-            'T_right': pygame.image.load(road_folder + 't_intersection01.png').convert_alpha(),
-            'T_left': pygame.image.load(road_folder + 't_intersection04.png').convert_alpha(),
-            'end_down': pygame.image.load(road_folder + 'end_road01.png').convert_alpha(),
-            'end_up': pygame.image.load(road_folder + 'end_road02.png').convert_alpha(),
-            'end_right': pygame.image.load(road_folder + 'end_road03.png').convert_alpha(),
-            'end_left': pygame.image.load(road_folder + 'end_road04.png').convert_alpha(),
-            'grass': pygame.image.load('hurry_taxi/assets/grass.png').convert_alpha(),
+            'horizontal': pygame.image.load(os.path.join(road_folder, 'horizontal_road.png')).convert_alpha(),
+            'vertical': pygame.image.load(os.path.join(road_folder, 'vertical_road.png')).convert_alpha(),
+            'curve_up_right': pygame.image.load(os.path.join(road_folder, 'curve03.png')).convert_alpha(),
+            'curve_up_left': pygame.image.load(os.path.join(road_folder, 'curve04.png')).convert_alpha(),
+            'curve_down_right': pygame.image.load(os.path.join(road_folder, 'curve01.png')).convert_alpha(),
+            'curve_down_left': pygame.image.load(os.path.join(road_folder, 'curve02.png')).convert_alpha(),
+            'crossroad': pygame.image.load(os.path.join(road_folder, 'crossroad.png')).convert_alpha(),
+            'T_down': pygame.image.load(os.path.join(road_folder, 't_intersection02.png')).convert_alpha(),
+            'T_up': pygame.image.load(os.path.join(road_folder, 't_intersection03.png')).convert_alpha(),
+            'T_right': pygame.image.load(os.path.join(road_folder, 't_intersection01.png')).convert_alpha(),
+            'T_left': pygame.image.load(os.path.join(road_folder, 't_intersection04.png')).convert_alpha(),
+            'end_down': pygame.image.load(os.path.join(road_folder, 'end_road01.png')).convert_alpha(),
+            'end_up': pygame.image.load(os.path.join(road_folder, 'end_road02.png')).convert_alpha(),
+            'end_right': pygame.image.load(os.path.join(road_folder, 'end_road03.png')).convert_alpha(),
+            'end_left': pygame.image.load(os.path.join(road_folder, 'end_road04.png')).convert_alpha(),
+            'grass': pygame.image.load(os.path.join(assets_folder, 'grass.png')).convert_alpha(),
         }
         self.car_sprites = {
-            'taxi': pygame.image.load(cars_folder + 'taxi_small.png').convert_alpha(),
-            'black': pygame.image.load(cars_folder + 'car_black_small.png').convert_alpha(),
-            'red': pygame.image.load(cars_folder + 'car_red_small.png').convert_alpha(),
-            'blue': pygame.image.load(cars_folder + 'car_blue_small.png').convert_alpha(),
-            'green': pygame.image.load(cars_folder + 'car_green_small.png').convert_alpha(),
+            'taxi': pygame.image.load(os.path.join(cars_folder, 'taxi_small.png')).convert_alpha(),
+            'black': pygame.image.load(os.path.join(cars_folder, 'car_black_small.png')).convert_alpha(),
+            'red': pygame.image.load(os.path.join(cars_folder, 'car_red_small.png')).convert_alpha(),
+            'blue': pygame.image.load(os.path.join(cars_folder, 'car_blue_small.png')).convert_alpha(),
+            'green': pygame.image.load(os.path.join(cars_folder, 'car_green_small.png')).convert_alpha(),
         }
-        
+
     def _render_car(self, original_sprite, position, direction):
         sprite = pygame.transform.scale(original_sprite, (int(self.pix_square_size), int(self.pix_square_size)))
         sprite = pygame.transform.rotate(sprite, self._direction_to_angle[direction])
