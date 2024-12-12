@@ -36,18 +36,27 @@ class TaxiGridEnv(gym.Env):
         self.window_size = 1024
         self.max_steps = max_steps
         self.agents_number = agents_number
+        self.number_of_npcs = 4
+        self.npcs = None
         # TODO: refactorizar para utilizar numpy
         self.map = map
         # Up, Down, Left, Right
         self.action_space = spaces.Discrete(4)
         
-        self.observation_space = spaces.Tuple(tuple(
-            spaces.Tuple((
-                spaces.Box(low=0, high=self.grid_size, shape=(2, ), dtype=int),
-                spaces.Discrete(4), # Direction of road: east, north, west, south
-                spaces.Discrete(2), # Has passenger: yes, no
-            )) for _ in range(self.agents_number)
-        ))
+        self.observation_space = spaces.Tuple(
+            tuple(
+                spaces.Tuple((
+                    spaces.Box(low=0, high=self.grid_size, shape=(2, ), dtype=int),
+                    spaces.Discrete(4), # Direction of road: east, north, west, south
+                    spaces.Discrete(2), # Has passenger: yes, no
+                )) for _ in range(self.agents_number)
+            ) + tuple(
+                spaces.Tuple((
+                    spaces.Box(low=0, high=self.grid_size, shape=(2, ), dtype=int),
+                    spaces.Discrete(4),
+                )) for _ in range(self.number_of_npcs)
+            )
+        )
 
         self._action_to_vector = {
             Actions.right: np.array([1, 0]),
@@ -64,8 +73,6 @@ class TaxiGridEnv(gym.Env):
             Directions.west: 90,
         }
 
-        self.number_of_npcs = 4
-        self.npcs = None
 
         self._init_randomizers()
         self._init_visualization(render_mode)
@@ -88,6 +95,9 @@ class TaxiGridEnv(gym.Env):
         return tuple(
             (agent["location"], agent["direction"].value, agent["has_passenger"])
             for agent in self._agents
+        ) + tuple(
+            (npc["location"], npc["direction"].value)
+            for npc in self.npcs
         )
     
     def _get_info(self):
