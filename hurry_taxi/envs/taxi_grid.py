@@ -267,12 +267,7 @@ class TaxiGridEnv(gym.Env):
         )
         self._render_car(self.car_sprites["taxi"], agent_position, self._direction)
         
-        for npc in self.npcs:
-            npc_position = (
-                int(npc["location"][0] * self.pix_square_size),
-                int(npc["location"][1] * self.pix_square_size),
-            )
-            self._render_car(self.car_sprites[npc["color"]], npc_position, npc["direction"])
+        self._render_npcs()
 
 
         if self.render_mode == "human":
@@ -285,6 +280,14 @@ class TaxiGridEnv(gym.Env):
             return np.transpose(
                 np.array(pygame.surfarray.pixels3d(self.canvas)), axes=(1, 0, 2)
             )
+
+    def _render_npcs(self):
+        for npc in self.npcs:
+            npc_position = (
+                int(npc["location"][0] * self.pix_square_size),
+                int(npc["location"][1] * self.pix_square_size),
+            )
+            self._render_car(self.car_sprites[npc["color"]], npc_position, npc["direction"])
 
     def _render_roads(self):
         for x in range(self.grid_size):
