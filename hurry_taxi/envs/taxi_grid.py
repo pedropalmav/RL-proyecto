@@ -247,13 +247,7 @@ class TaxiGridEnv(gym.Env):
             self.window_size / self.grid_size
         )
 
-        background_sprite = pygame.transform.scale(self.road_sprite['grass'], (int(self.pix_square_size), int(self.pix_square_size)))
-        sprite_width, sprite_height = background_sprite.get_size()
-        canvas_width, canvas_height = self.canvas.get_size()
-
-        for x in range(0, canvas_width, sprite_width):
-            for y in range(0, canvas_height, sprite_height):
-                self.canvas.blit(background_sprite, (x, y))
+        self._render_background()
 
         if not hasattr(self, "_person_sprite"):
             self._person_sprite = pygame.image.load("hurry_taxi/assets/characters/character_black_blue.png").convert_alpha()
@@ -261,7 +255,7 @@ class TaxiGridEnv(gym.Env):
         for x in range(self.grid_size):
             for y in range(self.grid_size):
                 position = (int(x * self.pix_square_size), int(y * self.pix_square_size))
-                if self.map[y][x] == 1:  # Road
+                if self.map[y][x] == 1:
                     connections = self.get_connections(x, y)
                     sprite = self.get_sprite(connections)
                     sprite = pygame.transform.scale(sprite, (int(self.pix_square_size), int(self.pix_square_size)))
@@ -301,6 +295,15 @@ class TaxiGridEnv(gym.Env):
             return np.transpose(
                 np.array(pygame.surfarray.pixels3d(self.canvas)), axes=(1, 0, 2)
             )
+
+    def _render_background(self):
+        background_sprite = pygame.transform.scale(self.road_sprite['grass'], (int(self.pix_square_size), int(self.pix_square_size)))
+        sprite_width, sprite_height = background_sprite.get_size()
+        canvas_width, canvas_height = self.canvas.get_size()
+
+        for x in range(0, canvas_width, sprite_width):
+            for y in range(0, canvas_height, sprite_height):
+                self.canvas.blit(background_sprite, (x, y))
         
     def _load_assets(self):
         assets_folder = os.path.join("hurry_taxi", "assets")
