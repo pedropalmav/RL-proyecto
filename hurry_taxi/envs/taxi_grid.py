@@ -31,14 +31,17 @@ class Events(Enum):
 class TaxiGridEnv(gym.Env):
     metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 4}
 
-    def __init__(self, render_mode=None, max_steps=200):
+    def __init__(self, render_mode=None, max_steps=200, agents_number=1):
         self.grid_size = 25
         self.window_size = 1024
         self.max_steps = max_steps
+        self.agents_number = agents_number
         # TODO: refactorizar para utilizar numpy
         self.map = map
         # Up, Down, Left, Right
         self.action_space = spaces.Discrete(4)
+        
+        # TODO: handle multile agents
         self.observation_space = spaces.Tuple((
             spaces.Box(low=0, high=self.grid_size, shape=(2, ), dtype=int),
             spaces.Discrete(4), # Direction of road: east, north, west, south
@@ -263,8 +266,7 @@ class TaxiGridEnv(gym.Env):
             self._agent_passenger = None
             self._event = Events.leaves_passenger
 
-        # TODO: Manejar esto con poisson?
-        if self.step_count % 50 == 0:
+        if self.step_count % 30 == 0 and len(self._waiting_passengers) <= 2 * self.agents_number:
             self._waiting_passengers.append(self._generate_passenger())
 
     def _is_near(self, location):
