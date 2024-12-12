@@ -276,14 +276,9 @@ class TaxiGridEnv(gym.Env):
         if not hasattr(self, "_person_sprite"):
             self._person_sprite = pygame.image.load("hurry_taxi/assets/characters/character_black_blue.png").convert_alpha()
 
-        target_position = (
-            int(self._target_location[0] * self.pix_square_size),
-            int(self._target_location[1] * self.pix_square_size),
-        )
+        self._render_passenger()
 
-        person_sprite = pygame.transform.scale(self._person_sprite, (int(self.pix_square_size), int(self.pix_square_size)))
-        self.canvas.blit(person_sprite, target_position)
-
+        # TODO: meter dentro de render car
         agent_position = (
             int(self._agent_location[0] * self.pix_square_size),
             int(self._agent_location[1] * self.pix_square_size),
@@ -303,6 +298,47 @@ class TaxiGridEnv(gym.Env):
             return np.transpose(
                 np.array(pygame.surfarray.pixels3d(self.canvas)), axes=(1, 0, 2)
             )
+
+    def _render_passenger(self):
+        tile_position = (
+            int(self._target_location[0] * self.pix_square_size),
+            int(self._target_location[1] * self.pix_square_size),
+        )
+        connections = [direction for direction, connected in self.get_connections(*self._target_location).items() if connected]
+        direction = np.random.choice(connections)
+        passenger_position = self._get_passenger_position(tile_position, direction)
+        person_sprite = pygame.transform.rotate(self._person_sprite, self._get_passenger_angle(direction))
+        person_sprite = pygame.transform.scale(person_sprite, (int(self.pix_square_size) / 2, int(self.pix_square_size) / 2))
+        self.canvas.blit(person_sprite, passenger_position)
+
+    def _get_passenger_position(self, tile_position, direction):
+        x, y = tile_position
+        delta_to_middle = int(self.pix_square_size / 4)
+        delta_to_side = int(self.pix_square_size / 2)
+        match direction:
+            case "right":
+                return (x + delta_to_side, y + delta_to_middle)
+            case "up":
+                return (x + delta_to_middle, y)
+            case "left":
+                return (x, y + delta_to_middle)
+            case "down":
+                return (x + delta_to_middle, y + delta_to_side)
+            case _:
+                return tile_position
+            
+    def _get_passenger_angle(self, direction):
+        match direction:
+            case "right":
+                return 90
+            case "up":
+                return 180
+            case "left":
+                return -90
+            case "down":
+                return 0
+            case _:
+                raise ValueError("Invalid direction")
 
     def _render_npcs(self):
         for npc in self.npcs:
