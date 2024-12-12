@@ -386,8 +386,6 @@ class TaxiGridEnv(gym.Env):
     
     def close(self):
         if self.screen is not None:
-            import pygame
-
             pygame.display.quit()
             pygame.quit()
             self.screen = None
