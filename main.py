@@ -41,4 +41,5 @@ done = False
 while not done and not quit_game:
     action = handle_player_input()
     observation, reward, done, _, info = env.step(action)
+    print(observation)
 env.close()

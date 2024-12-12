@@ -36,6 +36,7 @@ class TaxiGridEnv(gym.Env):
         self.window_size = 1024
         self.max_steps = max_steps
         self.agents_number = agents_number
+        self.max_passengers = 2 * self.agents_number
         self.number_of_npcs = 4
         self.npcs = None
         # TODO: refactorizar para utilizar numpy
@@ -46,15 +47,21 @@ class TaxiGridEnv(gym.Env):
         self.observation_space = spaces.Tuple(
             tuple(
                 spaces.Tuple((
-                    spaces.Box(low=0, high=self.grid_size, shape=(2, ), dtype=int),
-                    spaces.Discrete(4), # Direction of road: east, north, west, south
+                    spaces.Box(low=0, high=self.grid_size, shape=(2, ), dtype=int), # Taxi location
+                    spaces.Discrete(4), # Direction of taxi: east, north, west, south
                     spaces.Discrete(2), # Has passenger: yes, no
+                    spaces.Box(low=0, high=self.grid_size, shape=(2, ), dtype=int), # Passenger destination
                 )) for _ in range(self.agents_number)
             ) + tuple(
                 spaces.Tuple((
-                    spaces.Box(low=0, high=self.grid_size, shape=(2, ), dtype=int),
-                    spaces.Discrete(4),
+                    spaces.Box(low=0, high=self.grid_size, shape=(2, ), dtype=int), # NPC location
+                    spaces.Discrete(4), # Direction of NPC: east, north, west, south
                 )) for _ in range(self.number_of_npcs)
+            ) + tuple(
+                spaces.Tuple((
+                    spaces.Discrete(2), # Passenger exists
+                    spaces.Box(low=0, high=self.grid_size, shape=(2, ), dtype=int), # Passenger location
+                )) for _ in range(self.max_passengers)
             )
         )
 
@@ -93,11 +100,17 @@ class TaxiGridEnv(gym.Env):
 
     def _get_obs(self):
         return tuple(
-            (agent["location"], agent["direction"].value, agent["has_passenger"])
+            (agent["location"], agent["direction"].value, agent["has_passenger"], agent["passenger"]["destination"] if agent["has_passenger"] else np.array([0, 0]))
             for agent in self._agents
         ) + tuple(
             (npc["location"], npc["direction"].value)
             for npc in self.npcs
+        ) + tuple(
+            (1, passenger["location"])
+            for passenger in self._waiting_passengers
+        ) + tuple(
+            (0, np.array([0, 0]))
+            for _ in range(self.max_passengers - len(self._waiting_passengers))
         )
     
     def _get_info(self):
@@ -175,7 +188,7 @@ class TaxiGridEnv(gym.Env):
         return {
             "id": passenger_id,
             "location": location,
-            "destiny": self._get_valid_target_location(),
+            "destination": self._get_valid_target_location(),
             "shirt": np.random.choice(["white", "red", "blue", "green"]),
             "hair": np.random.choice(["black", "blonde", "brown"]),
             "direction": direction
@@ -300,7 +313,7 @@ class TaxiGridEnv(gym.Env):
 
     def _handle_drop_passenger(self):
         for agent in self._agents:
-            if agent["has_passenger"] and self._is_near(agent["location"], agent["passenger"]["destiny"]):
+            if agent["has_passenger"] and self._is_near(agent["location"], agent["passenger"]["destination"]):
                 agent["has_passenger"] = 0
                 agent["passenger"] = None
                 self._events[agent["id"]] = Events.leaves_passenger
@@ -395,8 +408,8 @@ class TaxiGridEnv(gym.Env):
             if agent["has_passenger"]:
                 passenger = agent["passenger"]
                 tile_position = (
-                    int(passenger["destiny"][0] * self.pix_square_size),
-                    int(passenger["destiny"][1] * self.pix_square_size),
+                    int(passenger["destination"][0] * self.pix_square_size),
+                    int(passenger["destination"][1] * self.pix_square_size),
                 )
                 pygame.draw.rect(
                     self.canvas, 
