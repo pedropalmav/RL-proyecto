@@ -41,11 +41,12 @@ class TaxiGridEnv(gym.Env):
         # Up, Down, Left, Right
         self.action_space = spaces.Discrete(4)
         
-        # TODO: handle multile agents
-        self.observation_space = spaces.Tuple((
-            spaces.Box(low=0, high=self.grid_size, shape=(2, ), dtype=int),
-            spaces.Discrete(4), # Direction of road: east, north, west, south
-            spaces.Discrete(2), # Has passenger: yes, no
+        self.observation_space = spaces.Tuple(tuple(
+            spaces.Tuple((
+                spaces.Box(low=0, high=self.grid_size, shape=(2, ), dtype=int),
+                spaces.Discrete(4), # Direction of road: east, north, west, south
+                spaces.Discrete(2), # Has passenger: yes, no
+            )) for _ in range(self.agents_number)
         ))
 
         self._action_to_vector = {
@@ -84,7 +85,10 @@ class TaxiGridEnv(gym.Env):
         self.isopen = True
 
     def _get_obs(self):
-        return (self._agent_location, self._agent_direction.value, self._has_passenger)
+        return tuple(
+            (agent["location"], agent["direction"].value, agent["has_passenger"])
+            for agent in self._agents
+        )
     
     def _get_info(self):
         return {
@@ -97,10 +101,7 @@ class TaxiGridEnv(gym.Env):
         self.step_count = 0
         self._passenger_id = 0
 
-        self._agent_location = self._get_location_on_road()
-        self._agent_direction = self._get_valid_direction(self._agent_location)
-        self._agent_passenger = None
-        self._has_passenger = 0
+        self._generate_agents()
         
         self._waiting_passengers = [self._generate_passenger()]
 
@@ -110,6 +111,19 @@ class TaxiGridEnv(gym.Env):
             self.render()
 
         return self._get_obs(), {}
+    
+    def _generate_agents(self):
+        self._agents = []
+        for agent_id in range(self.agents_number):
+            agent_location = self._get_location_on_road()
+            agent_direction = self._get_valid_direction(agent_location)
+            self._agents.append({
+                "id": agent_id,
+                "location": agent_location,
+                "direction": agent_direction,
+                "passenger": None,
+                "has_passenger": 0
+            })
     
     def _get_location_on_road(self):
         while True:
@@ -129,12 +143,18 @@ class TaxiGridEnv(gym.Env):
     def _get_valid_target_location(self):
         while True:
             location = np.array(self.randomizer.discrete_randomize(), dtype=int)
-            if self._is_beside_road(location) and not np.array_equal(location, self._agent_location):
+            if self._is_beside_road(location) and not self._is_equal_to_any_agent(location):
                 return location
             
     def _is_beside_road(self, location):
         connections = self.get_connections(location[0], location[1])
         return any(connections.values()) and self._is_out_of_road(location)
+    
+    def _is_equal_to_any_agent(self, location):
+        for agent in self._agents:
+            if np.array_equal(agent["location"], location):
+                return True
+        return False
     
     def _generate_passenger(self):
         passenger_id = self._passenger_id
@@ -166,23 +186,26 @@ class TaxiGridEnv(gym.Env):
             })
     
     def step(self, action):
-        self._event = None
-        action_vector = self._action_to_vector[action]
-        new_location = self._agent_location + action_vector
-        
-        self._handle_collision(new_location)
+        self._events = [None] * self.agents_number
+        for i in range(self.agents_number):
+            agent_action = action[i]
+            action_vector = self._action_to_vector[agent_action]
+            new_location = self._agents[i]["location"] + action_vector
+            self._handle_collision(i, new_location)
+            new_direction = self._get_direction_from_action(agent_action)
+            if new_direction:
+                self._agents[i]["direction"] = new_direction
         self._handle_passengers()
 
         self._move_npcs()
 
-        self._agent_direction = self._get_direction_from_action(action)
         self.step_count += 1
-        terminated = self.step_count >= self.max_steps or self._event == Events.collision
+        terminated = self.step_count >= self.max_steps
 
         if self.render_mode == "human":
             self.render()
 
-        return self._get_obs(), self._get_reward(), terminated, False, self._get_info()
+        return self._get_obs(), sum(self._get_reward(event) for event in self._events) / self.agents_number, terminated, False, self._get_info()
     
     def _move_npcs(self):
         for npc in self.npcs:
@@ -191,7 +214,9 @@ class TaxiGridEnv(gym.Env):
             npc_action = self._get_npc_action(npc_location, npc_direction)
             npc_action_vector = self._action_to_vector[npc_action]
             npc["location"] = npc_location + npc_action_vector
-            npc["direction"] = self._get_direction_from_action(npc_action)
+            new_direction = self._get_direction_from_action(npc_action)
+            if new_direction:
+                npc["direction"] = new_direction
 
     def _get_npc_action(self, location, direction):
         connections = self.get_connections(location[0], location[1])
@@ -227,22 +252,23 @@ class TaxiGridEnv(gym.Env):
                 return Directions.west
             case Actions.down:
                 return Directions.south
+            case Actions.nothing:
+                return None
             case _:
-                # TODO: fix this
-                return self._agent_direction
+                raise ValueError("Invalid action")
     
-    def _handle_collision(self, new_location):
-        if self._agent_collides(new_location):
-            self._event = Events.collision
+    def _handle_collision(self, agent_id, new_location):
+        if self._agent_collides(agent_id, new_location):
+            self._events[agent_id] = Events.collision
         else:
-            self._agent_location = new_location
+            self._agents[agent_id]["location"] = new_location
 
-    def _agent_collides(self, location):
-        return self._is_off_limits(location) or self._is_out_of_road(location) or self._hits_other_car(location)
+    def _agent_collides(self, agent_id, location):
+        return self._is_off_limits(location) or self._is_out_of_road(location) or self._hits_other_car(agent_id, location)
     
-    def _hits_other_car(self, location):
+    def _hits_other_car(self, agent_id, location):
         for npc in self.npcs:
-            if np.array_equal(npc["location"], location) and npc["direction"] == self._agent_direction:
+            if np.array_equal(npc["location"], location) and npc["direction"] == self._agents[agent_id]["direction"]:
                 return True
         return False
     
@@ -254,30 +280,35 @@ class TaxiGridEnv(gym.Env):
             or location[1] < 0 or location[1] >= self.grid_size
     
     def _handle_passengers(self):
+
+        # TODO: Refactor with method handle_pick_passengers
         picked_passengers = []
         for passenger in self._waiting_passengers:
-            if self._is_near(passenger["location"]) and not self._has_passenger:
-                self._has_passenger = 1
-                self._agent_passenger = passenger
-                self._event = Events.takes_passenger
-                picked_passengers.append(passenger)
+            for agent in self._agents:
+                if self._is_near(agent["location"], passenger["location"]) and not agent["has_passenger"]:
+                    agent["has_passenger"] = 1
+                    agent["passenger"] = passenger
+                    self._events[agent["id"]] = Events.takes_passenger
+                    picked_passengers.append(passenger)
 
         self._waiting_passengers = [passenger for passenger in self._waiting_passengers if passenger not in picked_passengers]
 
-        if self._has_passenger and self._is_near(self._agent_passenger["destiny"]):
-            self._has_passenger = 0
-            self._agent_passenger = None
-            self._event = Events.leaves_passenger
+        # TODO: Refactor with method handle_drop_passenger
+        for agent in self._agents:
+            if agent["has_passenger"] and self._is_near(agent["location"], agent["passenger"]["destiny"]):
+                agent["has_passenger"] = 0
+                agent["passenger"] = None
+                self._events[agent["id"]] = Events.leaves_passenger
 
         if self.step_count % 30 == 0 and len(self._waiting_passengers) <= 2 * self.agents_number:
             self._waiting_passengers.append(self._generate_passenger())
 
-    def _is_near(self, location):
-        return np.linalg.norm(self._agent_location - location, ord=1) == 1
+    def _is_near(self, location_1, location_2):
+        return np.linalg.norm(location_1 - location_2, ord=1) == 1
 
 
-    def _get_reward(self):
-        match(self._event):
+    def _get_reward(self, event):
+        match(event):
             case Events.takes_passenger:
                 return 1
             case Events.leaves_passenger:
@@ -305,17 +336,9 @@ class TaxiGridEnv(gym.Env):
 
         self._render_background()
         self._render_roads()
-
         self._render_passengers()
         self._render_destinations()
-
-        # TODO: Render agents
-        agent_position = (
-            int(self._agent_location[0] * self.pix_square_size),
-            int(self._agent_location[1] * self.pix_square_size),
-        )
-        self._render_car(self.car_sprites["taxi"], agent_position, self._agent_direction)
-        
+        self._render_agents()
         self._render_npcs()
 
 
@@ -329,6 +352,14 @@ class TaxiGridEnv(gym.Env):
             return np.transpose(
                 np.array(pygame.surfarray.pixels3d(self.canvas)), axes=(1, 0, 2)
             )
+
+    def _render_agents(self):
+        for agent in self._agents:
+            agent_position = (
+                int(agent["location"][0] * self.pix_square_size),
+                int(agent["location"][1] * self.pix_square_size),
+            )
+            self._render_car(self.car_sprites["taxi"], agent_position, agent["direction"])
         
     def _render_passengers(self):
         for passenger in self._waiting_passengers:
@@ -346,18 +377,19 @@ class TaxiGridEnv(gym.Env):
         self.canvas.blit(person_sprite, passenger_position)
 
     def _render_destinations(self):
-        if self._has_passenger:
-            passenger = self._agent_passenger
-            tile_position = (
-                int(passenger["destiny"][0] * self.pix_square_size),
-                int(passenger["destiny"][1] * self.pix_square_size),
-            )
-            pygame.draw.rect(
-                self.canvas, 
-                (255, 0, 0),
-                (tile_position[0], tile_position[1], int(self.pix_square_size), int(self.pix_square_size)),
-                width=2
-            )
+        for agent in self._agents:
+            if agent["has_passenger"]:
+                passenger = agent["passenger"]
+                tile_position = (
+                    int(passenger["destiny"][0] * self.pix_square_size),
+                    int(passenger["destiny"][1] * self.pix_square_size),
+                )
+                pygame.draw.rect(
+                    self.canvas, 
+                    (255, 0, 0),
+                    (tile_position[0], tile_position[1], int(self.pix_square_size), int(self.pix_square_size)),
+                    width=2
+                )
         
 
     def _get_passenger_position(self, tile_position, direction):

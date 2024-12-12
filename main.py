@@ -22,5 +22,6 @@ observation, info = env.reset()
 done = False
 while not done:
     action = handle_player_input()
+    action = [action]
     observation, reward, done, _, info = env.step(action)
 env.close()
