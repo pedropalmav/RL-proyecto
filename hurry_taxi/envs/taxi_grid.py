@@ -2,6 +2,7 @@ import gymnasium as gym
 from gymnasium import spaces
 from gymnasium.error import DependencyNotInstalled
 import numpy as np
+import pygame
 from enum import Enum
 
 from hurry_taxi.utils.guaussian import Gaussian2D
@@ -127,6 +128,8 @@ class TaxiGridEnv(gym.Env):
         self._handle_collision(new_location)
         self._handle_passenger()
 
+        self._move_npcs()
+
         self._direction = self._get_direction_from_action(action)
         terminated = self.steps >= self.max_steps or self._event == Events.collision
 
@@ -134,6 +137,39 @@ class TaxiGridEnv(gym.Env):
             self.render()
 
         return self._get_obs(), self._get_reward(), terminated, False, self._get_info()
+    
+    def _move_npcs(self):
+        for npc in self.npcs:
+            npc_location = npc["location"]
+            npc_direction = npc["direction"]
+            npc_action = self._get_npc_action(npc_location, npc_direction)
+            npc_action_vector = self._action_to_vector[npc_action]
+            npc["location"] = npc_location + npc_action_vector
+            npc["direction"] = self._get_direction_from_action(npc_action)
+
+    def _get_npc_action(self, location, direction):
+        connections = self.get_connections(location[0], location[1])
+        possible_actions = self._filter_actions_by_connections(connections)
+        possible_actions = self._prevent_u_turn(possible_actions, direction)
+        return np.random.choice(possible_actions)
+
+    def _filter_actions_by_connections(self, connections):
+        possible_actions = []
+        for action in Actions:
+            if action == Actions.nothing or connections[action.name] == 1:
+                possible_actions.append(action)
+        return possible_actions
+    
+    def _prevent_u_turn(self, actions, car_direction):
+        opposite_direction = {
+            Directions.east: Directions.west,
+            Directions.west: Directions.east,
+            Directions.north: Directions.south,
+            Directions.south: Directions.north
+        }
+        if opposite_direction[car_direction] in actions:
+            actions.remove(opposite_direction[car_direction])
+        return actions
     
     def _get_direction_from_action(self, action):
         match action:
@@ -196,13 +232,6 @@ class TaxiGridEnv(gym.Env):
                 return 0
 
     def render(self):
-        try:
-            import pygame
-        except ImportError as e:
-            raise DependencyNotInstalled(
-                "pygame is not installed. Use `pip install pygame` to install it."
-            ) from e
-        
         if self.window is None and self.render_mode == "human":
             pygame.init()
             pygame.display.init()
@@ -237,19 +266,19 @@ class TaxiGridEnv(gym.Env):
             'blue': pygame.image.load(cars_folder + 'car_blue_small.png').convert_alpha(),
             'green': pygame.image.load(cars_folder + 'car_green_small.png').convert_alpha(),
         }
-        canvas = pygame.Surface((self.window_size, self.window_size))
-        canvas.fill((255, 255, 255))
-        pix_square_size = (
+        self.canvas = pygame.Surface((self.window_size, self.window_size))
+        self.canvas.fill((255, 255, 255))
+        self.pix_square_size = (
             self.window_size / self.grid_size
         )
 
-        background_sprite = pygame.transform.scale(self.road_sprite['grass'], (int(pix_square_size), int(pix_square_size)))
+        background_sprite = pygame.transform.scale(self.road_sprite['grass'], (int(self.pix_square_size), int(self.pix_square_size)))
         sprite_width, sprite_height = background_sprite.get_size()
-        canvas_width, canvas_height = canvas.get_size()
+        canvas_width, canvas_height = self.canvas.get_size()
 
         for x in range(0, canvas_width, sprite_width):
             for y in range(0, canvas_height, sprite_height):
-                canvas.blit(background_sprite, (x, y))
+                self.canvas.blit(background_sprite, (x, y))
 
         if not hasattr(self, "_car_sprite"):
             self._car_sprite = pygame.image.load("hurry_taxi/assets/cars/taxi_small.png").convert_alpha()
@@ -259,50 +288,52 @@ class TaxiGridEnv(gym.Env):
         
         for x in range(self.grid_size):
             for y in range(self.grid_size):
-                position = (int(x * pix_square_size), int(y * pix_square_size))
+                position = (int(x * self.pix_square_size), int(y * self.pix_square_size))
                 if self.map[y][x] == 1:  # Road
                     connections = self.get_connections(x, y)
                     sprite = self.get_sprite(connections)
-                    sprite = pygame.transform.scale(sprite, (int(pix_square_size), int(pix_square_size)))
+                    sprite = pygame.transform.scale(sprite, (int(self.pix_square_size), int(self.pix_square_size)))
                     if sprite:
-                        canvas.blit(sprite, position)
+                        self.canvas.blit(sprite, position)
 
 
         target_position = (
-            int(self._target_location[0] * pix_square_size),
-            int(self._target_location[1] * pix_square_size),
+            int(self._target_location[0] * self.pix_square_size),
+            int(self._target_location[1] * self.pix_square_size),
         )
 
-        person_sprite = pygame.transform.scale(self._person_sprite, (int(pix_square_size), int(pix_square_size)))
-        canvas.blit(person_sprite, target_position)
+        person_sprite = pygame.transform.scale(self._person_sprite, (int(self.pix_square_size), int(self.pix_square_size)))
+        self.canvas.blit(person_sprite, target_position)
 
         agent_position = (
-            int(self._agent_location[0] * pix_square_size),
-            int(self._agent_location[1] * pix_square_size),
+            int(self._agent_location[0] * self.pix_square_size),
+            int(self._agent_location[1] * self.pix_square_size),
         )
-        rotated_car_sprite = pygame.transform.rotate(self._car_sprite, self._direction_to_angle[self._direction])
-        car_sprite = pygame.transform.scale(rotated_car_sprite, (int(pix_square_size), int(pix_square_size)))
-        canvas.blit(car_sprite, agent_position)
+        self._render_car(self.car_sprites["taxi"], agent_position, self._direction)
         
         for npc in self.npcs:
             npc_position = (
-                int(npc["location"][0] * pix_square_size),
-                int(npc["location"][1] * pix_square_size),
+                int(npc["location"][0] * self.pix_square_size),
+                int(npc["location"][1] * self.pix_square_size),
             )
-            car_sprite = pygame.transform.scale(self.car_sprites[npc["color"]], (int(pix_square_size), int(pix_square_size)))
-            canvas.blit(car_sprite, npc_position)
+            self._render_car(self.car_sprites[npc["color"]], npc_position, npc["direction"])
 
 
         if self.render_mode == "human":
-            self.window.blit(canvas, canvas.get_rect())
+            self.window.blit(self.canvas, self.canvas.get_rect())
             pygame.event.pump()
             pygame.display.update()
 
             self.clock.tick(self.metadata["render_fps"])
         else:
             return np.transpose(
-                np.array(pygame.surfarray.pixels3d(canvas)), axes=(1, 0, 2)
+                np.array(pygame.surfarray.pixels3d(self.canvas)), axes=(1, 0, 2)
             )
+        
+    def _render_car(self, original_sprite, position, direction):
+        sprite = pygame.transform.scale(original_sprite, (int(self.pix_square_size), int(self.pix_square_size)))
+        sprite = pygame.transform.rotate(sprite, self._direction_to_angle[direction])
+        self.canvas.blit(sprite, position)
     
     def close(self):
         if self.screen is not None:
