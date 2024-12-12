@@ -31,7 +31,7 @@ class Events(Enum):
 class TaxiGridEnv(gym.Env):
     metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 4}
 
-    def __init__(self, render_mode=None, max_steps=100):
+    def __init__(self, render_mode=None, max_steps=200):
         self.grid_size = 25
         self.window_size = 1024
         self.max_steps = max_steps
@@ -154,6 +154,7 @@ class TaxiGridEnv(gym.Env):
         self._move_npcs()
 
         self._direction = self._get_direction_from_action(action)
+        self.steps += 1
         terminated = self.steps >= self.max_steps or self._event == Events.collision
 
         if self.render_mode == "human":
@@ -278,7 +279,7 @@ class TaxiGridEnv(gym.Env):
 
         self._render_passenger()
 
-        # TODO: meter dentro de render car
+        # TODO: Render agents
         agent_position = (
             int(self._agent_location[0] * self.pix_square_size),
             int(self._agent_location[1] * self.pix_square_size),
