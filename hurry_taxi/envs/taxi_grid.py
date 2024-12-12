@@ -222,7 +222,8 @@ class TaxiGridEnv(gym.Env):
             case Actions.down:
                 return Directions.south
             case _:
-                raise ValueError("Invalid action")
+                # TODO: fix this
+                return self._agent_direction
     
     def _handle_collision(self, new_location):
         if self._agent_collides(new_location):
@@ -301,6 +302,7 @@ class TaxiGridEnv(gym.Env):
         self._render_roads()
 
         self._render_passengers()
+        self._render_destinations()
 
         # TODO: Render agents
         agent_position = (
@@ -340,6 +342,21 @@ class TaxiGridEnv(gym.Env):
         person_sprite = pygame.transform.rotate(self.character_sprites[f"{passenger['hair']}_{passenger['shirt']}"], self._get_passenger_angle(direction))
         person_sprite = pygame.transform.scale(person_sprite, (int(self.pix_square_size) / 2, int(self.pix_square_size) / 2))
         self.canvas.blit(person_sprite, passenger_position)
+
+    def _render_destinations(self):
+        if self._has_passenger:
+            passenger = self._agent_passenger
+            tile_position = (
+                int(passenger["destiny"][0] * self.pix_square_size),
+                int(passenger["destiny"][1] * self.pix_square_size),
+            )
+            pygame.draw.rect(
+                self.canvas, 
+                (255, 0, 0),
+                (tile_position[0], tile_position[1], int(self.pix_square_size), int(self.pix_square_size)),
+                width=2
+            )
+        
 
     def _get_passenger_position(self, tile_position, direction):
         x, y = tile_position
