@@ -64,15 +64,15 @@ class TaxiGridEnv(gym.Env):
         self.npcs = None
 
         self._init_randomizers()
-        self._init_visualization()
+        self._init_visualization(render_mode)
     
     def _init_randomizers(self):
         self.randomizer = PositionRandomizer(self.grid_size)
         mean = self.grid_size / 2
         self.gaussian = Gaussian2D([mean, mean], [[1, 0], [0, 1]])
 
-    def _init_visualization(self):
-        self.render_mode = "human"
+    def _init_visualization(self, render_mode):
+        self.render_mode = render_mode
         self.screen_width = 600
         self.screen_height = 600
         self.window = None
