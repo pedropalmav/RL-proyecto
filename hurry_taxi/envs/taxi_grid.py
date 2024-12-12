@@ -139,13 +139,16 @@ class TaxiGridEnv(gym.Env):
     def _generate_passenger(self):
         passenger_id = self._passenger_id
         self._passenger_id += 1
+        location = self._get_valid_target_location()
+        connections = [direction for direction, connected in self.get_connections(*location).items() if connected]
+        direction = np.random.choice(connections)
         return {
             "id": passenger_id,
-            "location": self._get_valid_target_location(),
+            "location": location,
             "destiny": self._get_valid_target_location(),
             "shirt": np.random.choice(["white", "red", "blue", "green"]),
             "hair": np.random.choice(["black", "blonde", "brown"]),
-            # TODO: Handle direction here
+            "direction": direction
         }
     
     def _generate_npcs(self):
@@ -336,12 +339,9 @@ class TaxiGridEnv(gym.Env):
             int(passenger["location"][0] * self.pix_square_size),
             int(passenger["location"][1] * self.pix_square_size),
         )
-        # TODO: mover esto al generador de pasajeros
-        connections = [direction for direction, connected in self.get_connections(*passenger["location"]).items() if connected]
-        direction = np.random.choice(connections)
 
-        passenger_position = self._get_passenger_position(tile_position, direction)
-        person_sprite = pygame.transform.rotate(self.character_sprites[f"{passenger['hair']}_{passenger['shirt']}"], self._get_passenger_angle(direction))
+        passenger_position = self._get_passenger_position(tile_position, passenger["direction"])
+        person_sprite = pygame.transform.rotate(self.character_sprites[f"{passenger['hair']}_{passenger['shirt']}"], self._get_passenger_angle(passenger["direction"]))
         person_sprite = pygame.transform.scale(person_sprite, (int(self.pix_square_size) / 2, int(self.pix_square_size) / 2))
         self.canvas.blit(person_sprite, passenger_position)
 
