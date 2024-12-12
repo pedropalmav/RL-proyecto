@@ -31,7 +31,7 @@ class Events(Enum):
 class TaxiGridEnv(gym.Env):
     metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 4}
 
-    def __init__(self, render_mode=None, max_steps=200, agents_number=1):
+    def __init__(self, render_mode=None, max_steps=200, agents_number=2):
         self.grid_size = 25
         self.window_size = 1024
         self.max_steps = max_steps
