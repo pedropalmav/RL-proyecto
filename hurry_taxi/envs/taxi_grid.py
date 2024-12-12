@@ -95,7 +95,7 @@ class TaxiGridEnv(gym.Env):
         self._agent_location = self._get_location_on_road()
         self._direction = self._get_valid_direction(self._agent_location)
         self._has_passenger = 0
-        self._target_location = np.array(self.randomizer.discrete_randomize(), dtype=int)
+        self._target_location = self._get_valid_target_location()
 
         self._generate_npcs()
 
@@ -118,6 +118,16 @@ class TaxiGridEnv(gym.Env):
                 direction = self._get_direction_from_action(Actions[direction])
                 available_directions.append(direction)
         return np.random.choice(available_directions)
+    
+    def _get_valid_target_location(self):
+        while True:
+            location = np.array(self.randomizer.discrete_randomize(), dtype=int)
+            if self._is_beside_road(location) and not np.array_equal(location, self._agent_location):
+                return location
+            
+    def _is_beside_road(self, location):
+        connections = self.get_connections(location[0], location[1])
+        return any(connections.values()) and self._is_out_of_road(location)
     
     def _generate_npcs(self):
         self.npcs = []
@@ -222,11 +232,11 @@ class TaxiGridEnv(gym.Env):
     def _handle_passenger(self):
         if self._is_target_near() and not self._has_passenger:
             self._has_passenger = 1
-            self._target_location = np.array(self.randomizer.discrete_randomize(), dtype=int)
+            self._target_location = self._get_valid_target_location()
             self._event = Events.takes_passenger
         elif self._is_target_near() and self._has_passenger:
             self._has_passenger = 0
-            self._target_location = np.array(self.randomizer.discrete_randomize(), dtype=int)
+            self._target_location = self._get_valid_target_location()
             self._event = Events.leaves_passenger
 
     def _is_target_near(self):
