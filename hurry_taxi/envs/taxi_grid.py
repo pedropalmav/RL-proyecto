@@ -248,20 +248,10 @@ class TaxiGridEnv(gym.Env):
         )
 
         self._render_background()
+        self._render_roads()
 
         if not hasattr(self, "_person_sprite"):
             self._person_sprite = pygame.image.load("hurry_taxi/assets/characters/character_black_blue.png").convert_alpha()
-        
-        for x in range(self.grid_size):
-            for y in range(self.grid_size):
-                position = (int(x * self.pix_square_size), int(y * self.pix_square_size))
-                if self.map[y][x] == 1:
-                    connections = self.get_connections(x, y)
-                    sprite = self.get_sprite(connections)
-                    sprite = pygame.transform.scale(sprite, (int(self.pix_square_size), int(self.pix_square_size)))
-                    if sprite:
-                        self.canvas.blit(sprite, position)
-
 
         target_position = (
             int(self._target_location[0] * self.pix_square_size),
@@ -295,6 +285,17 @@ class TaxiGridEnv(gym.Env):
             return np.transpose(
                 np.array(pygame.surfarray.pixels3d(self.canvas)), axes=(1, 0, 2)
             )
+
+    def _render_roads(self):
+        for x in range(self.grid_size):
+            for y in range(self.grid_size):
+                position = (int(x * self.pix_square_size), int(y * self.pix_square_size))
+                if self.map[y][x] == 1:
+                    connections = self.get_connections(x, y)
+                    sprite = self.get_sprite(connections)
+                    sprite = pygame.transform.scale(sprite, (int(self.pix_square_size), int(self.pix_square_size)))
+                    if sprite:
+                        self.canvas.blit(sprite, position)
 
     def _render_background(self):
         background_sprite = pygame.transform.scale(self.road_sprite['grass'], (int(self.pix_square_size), int(self.pix_square_size)))
