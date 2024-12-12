@@ -332,10 +332,27 @@ class TaxiGridEnv(gym.Env):
             'green': pygame.image.load(os.path.join(cars_folder, 'car_green_small.png')).convert_alpha(),
         }
 
-    def _render_car(self, original_sprite, position, direction):
-        sprite = pygame.transform.scale(original_sprite, (int(self.pix_square_size), int(self.pix_square_size)))
-        sprite = pygame.transform.rotate(sprite, self._direction_to_angle[direction])
+    def _render_car(self, original_sprite, tile_position, direction):
+        dimensions = self._get_car_dimensions(direction)
+        position = self._get_car_position(tile_position, direction)
+        sprite = pygame.transform.rotate(original_sprite, self._direction_to_angle[direction])
+        sprite = pygame.transform.scale(sprite, dimensions)
         self.canvas.blit(sprite, position)
+    
+    def _get_car_dimensions(self, direction):
+        if direction == Directions.east or direction == Directions.west:
+            return (int(self.pix_square_size), int(self.pix_square_size) / 2)
+        return (int(self.pix_square_size) / 2, int(self.pix_square_size))
+    
+    def _get_car_position(self, location, direction):
+        x, y = location
+        match direction:
+            case Directions.east:
+                return (x, y + int(self.pix_square_size / 2))
+            case Directions.north:
+                return (x + int(self.pix_square_size / 2), y)
+            case _:
+                return location
     
     def close(self):
         if self.screen is not None:
