@@ -280,8 +280,22 @@ class TaxiGridEnv(gym.Env):
             or location[1] < 0 or location[1] >= self.grid_size
     
     def _handle_passengers(self):
+        self._handle_pick_passengers()
+        self._handle_drop_passenger()
+        self._handle_new_waiting_passengers()
 
-        # TODO: Refactor with method handle_pick_passengers
+    def _handle_new_waiting_passengers(self):
+        if self.step_count % 30 == 0 and len(self._waiting_passengers) <= 2 * self.agents_number:
+            self._waiting_passengers.append(self._generate_passenger())
+
+    def _handle_drop_passenger(self):
+        for agent in self._agents:
+            if agent["has_passenger"] and self._is_near(agent["location"], agent["passenger"]["destiny"]):
+                agent["has_passenger"] = 0
+                agent["passenger"] = None
+                self._events[agent["id"]] = Events.leaves_passenger
+
+    def _handle_pick_passengers(self):
         picked_passengers = []
         for passenger in self._waiting_passengers:
             for agent in self._agents:
@@ -292,16 +306,6 @@ class TaxiGridEnv(gym.Env):
                     picked_passengers.append(passenger)
 
         self._waiting_passengers = [passenger for passenger in self._waiting_passengers if passenger not in picked_passengers]
-
-        # TODO: Refactor with method handle_drop_passenger
-        for agent in self._agents:
-            if agent["has_passenger"] and self._is_near(agent["location"], agent["passenger"]["destiny"]):
-                agent["has_passenger"] = 0
-                agent["passenger"] = None
-                self._events[agent["id"]] = Events.leaves_passenger
-
-        if self.step_count % 30 == 0 and len(self._waiting_passengers) <= 2 * self.agents_number:
-            self._waiting_passengers.append(self._generate_passenger())
 
     def _is_near(self, location_1, location_2):
         return np.linalg.norm(location_1 - location_2, ord=1) == 1
