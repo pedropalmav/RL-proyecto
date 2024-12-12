@@ -59,6 +59,9 @@ class TaxiGridEnv(gym.Env):
             Directions.west: 90,
         }
 
+        self.number_of_npcs = 4
+        self.npcs = None
+
         self._init_randomizers()
         self._init_visualization()
     
@@ -95,10 +98,26 @@ class TaxiGridEnv(gym.Env):
         self._has_passenger = 0
         self._target_location = np.array(self.randomizer.discrete_randomize(), dtype=int)
 
+        self._generate_npcs()
+
         if self.render_mode == "human":
             self.render()
 
         return self._get_obs(), {}
+    
+    def _generate_npcs(self):
+        self.npcs = []
+        for _ in range(self.number_of_npcs):
+            npc_location = np.array(self.randomizer.discrete_randomize(), dtype=int)
+            while self._is_out_of_road(npc_location):
+                npc_location = np.array(self.randomizer.discrete_randomize(), dtype=int)
+            npc_color = np.random.choice(["black", "red", "blue", "green"])
+
+            self.npcs.append({
+                "location": npc_location,
+                "direction": np.random.choice(list(Directions)),
+                "color": npc_color
+            })
     
     def step(self, action):
         self._event = None
@@ -136,7 +155,6 @@ class TaxiGridEnv(gym.Env):
             self._agent_location = new_location
 
     def _agent_collides(self, location):
-        # TODO: colisión con bordes de la calle
         # TODO: colisión con otro auto
         return self._is_off_limits(location) or self._is_out_of_road(location)
     
@@ -206,6 +224,14 @@ class TaxiGridEnv(gym.Env):
             'end_left': pygame.image.load(road_folder+'end_road04.png').convert_alpha(),
             'grass': pygame.image.load('hurry_taxi/assets/grass.png').convert_alpha(),
         }
+        cars_folder = "hurry_taxi/assets/cars/"
+        self.car_sprites = {
+            'taxi': pygame.image.load(cars_folder + 'taxi_small.png').convert_alpha(),
+            'black': pygame.image.load(cars_folder + 'car_black_small.png').convert_alpha(),
+            'red': pygame.image.load(cars_folder + 'car_red_small.png').convert_alpha(),
+            'blue': pygame.image.load(cars_folder + 'car_blue_small.png').convert_alpha(),
+            'green': pygame.image.load(cars_folder + 'car_green_small.png').convert_alpha(),
+        }
         canvas = pygame.Surface((self.window_size, self.window_size))
         canvas.fill((255, 255, 255))
         pix_square_size = (
@@ -253,6 +279,15 @@ class TaxiGridEnv(gym.Env):
         car_sprite = pygame.transform.scale(rotated_car_sprite, (int(pix_square_size), int(pix_square_size)))
         canvas.blit(car_sprite, agent_position)
         
+        for npc in self.npcs:
+            npc_position = (
+                int(npc["location"][0] * pix_square_size),
+                int(npc["location"][1] * pix_square_size),
+            )
+            car_sprite = pygame.transform.scale(self.car_sprites[npc["color"]], (int(pix_square_size), int(pix_square_size)))
+            canvas.blit(car_sprite, npc_position)
+
+
         if self.render_mode == "human":
             self.window.blit(canvas, canvas.get_rect())
             pygame.event.pump()

@@ -23,5 +23,4 @@ done = False
 while not done:
     action = handle_player_input()
     observation, reward, done, _, info = env.step(action)
-    # print(observation, reward)
 env.close()
