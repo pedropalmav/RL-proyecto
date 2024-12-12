@@ -81,7 +81,7 @@ class TaxiGridEnv(gym.Env):
         self.isopen = True
 
     def _get_obs(self):
-        return (self._agent_location, self._direction.value, self._has_passenger)
+        return (self._agent_location, self._agent_direction.value, self._has_passenger)
     
     def _get_info(self):
         return {
@@ -95,7 +95,7 @@ class TaxiGridEnv(gym.Env):
         self._passenger_id = 0
 
         self._agent_location = self._get_location_on_road()
-        self._direction = self._get_valid_direction(self._agent_location)
+        self._agent_direction = self._get_valid_direction(self._agent_location)
         self._agent_passenger = None
         self._has_passenger = 0
         
@@ -169,7 +169,7 @@ class TaxiGridEnv(gym.Env):
 
         self._move_npcs()
 
-        self._direction = self._get_direction_from_action(action)
+        self._agent_direction = self._get_direction_from_action(action)
         self.step_count += 1
         terminated = self.step_count >= self.max_steps or self._event == Events.collision
 
@@ -222,7 +222,7 @@ class TaxiGridEnv(gym.Env):
             case Actions.down:
                 return Directions.south
             case _:
-                return self._direction
+                raise ValueError("Invalid action")
     
     def _handle_collision(self, new_location):
         if self._agent_collides(new_location):
@@ -235,7 +235,7 @@ class TaxiGridEnv(gym.Env):
     
     def _hits_other_car(self, location):
         for npc in self.npcs:
-            if np.array_equal(npc["location"], location) and npc["direction"] == self._direction:
+            if np.array_equal(npc["location"], location) and npc["direction"] == self._agent_direction:
                 return True
         return False
     
@@ -307,7 +307,7 @@ class TaxiGridEnv(gym.Env):
             int(self._agent_location[0] * self.pix_square_size),
             int(self._agent_location[1] * self.pix_square_size),
         )
-        self._render_car(self.car_sprites["taxi"], agent_position, self._direction)
+        self._render_car(self.car_sprites["taxi"], agent_position, self._agent_direction)
         
         self._render_npcs()
 
