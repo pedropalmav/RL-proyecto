@@ -25,6 +25,6 @@ obs, info = env.reset()
 
 
 model = TD3("MlpPolicy", env, verbose=1)
-model.learn(total_timesteps=25000, log_interval=10)
+model.learn(total_timesteps=25*args.steps, log_interval=10)
 model.save(os.path.join("models", filename))
 
