@@ -31,13 +31,13 @@ class Events(Enum):
 class TaxiGridEnv(gym.Env):
     metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 4}
 
-    def __init__(self, render_mode=None, max_steps=1000, agents_number=2):
+    def __init__(self, render_mode=None, max_steps=1000, agents_number=2, npc_number=4):
         self.grid_size = 25
         self.window_size = 1024
         self.max_steps = max_steps
         self.agents_number = agents_number
         self.max_passengers = 2 * self.agents_number
-        self.number_of_npcs = 4
+        self.number_of_npcs = npc_number
         self.npcs = None
         # TODO: refactorizar para utilizar numpy
         self.map = map
