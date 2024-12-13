@@ -7,23 +7,23 @@ import pygame
 def handle_player_input():
     global quit_game
     keys = pygame.key.get_pressed()
-    action = [Actions.nothing, Actions.nothing]
+    action = [1, 1]
     if keys[pygame.K_RIGHT]:
-        action[1] = Actions.right
+        action[1] = -1
     if keys[pygame.K_UP]:
-        action[1] = Actions.up
+        action[1] = -0.5
     if keys[pygame.K_LEFT]:
-        action[1] = Actions.left
+        action[1] = 0
     if keys[pygame.K_DOWN]:
-        action[1] = Actions.down
+        action[1] = 0.5
     if keys[pygame.K_d]:
-        action[0] = Actions.right
+        action[0] = -1
     if keys[pygame.K_w]:
-        action[0] = Actions.up
+        action[0] = -0.5
     if keys[pygame.K_a]:
-        action[0] = Actions.left
+        action[0] = 0
     if keys[pygame.K_s]:
-        action[0] = Actions.down
+        action[0] = 0.5
     if keys[pygame.K_ESCAPE]:
         quit_game = True
 
@@ -41,5 +41,4 @@ done = False
 while not done and not quit_game:
     action = handle_player_input()
     observation, reward, done, _, info = env.step(action)
-    print(observation)
 env.close()
