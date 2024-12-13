@@ -31,7 +31,7 @@ class Events(Enum):
 class TaxiGridEnv(gym.Env):
     metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 4}
 
-    def __init__(self, render_mode=None, max_steps=200, agents_number=2):
+    def __init__(self, render_mode=None, max_steps=1000, agents_number=2):
         self.grid_size = 25
         self.window_size = 1024
         self.max_steps = max_steps
@@ -42,7 +42,9 @@ class TaxiGridEnv(gym.Env):
         # TODO: refactorizar para utilizar numpy
         self.map = map
         # Up, Down, Left, Right
-        self.action_space = spaces.MultiDiscrete([5] * self.agents_number)
+        # self.action_space = spaces.MultiDiscrete([5] * self.agents_number)
+        self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(self.agents_number,), dtype=np.float32)
+
         
         obs_dim = (
             2 * self.agents_number +  # Agent locations
@@ -203,10 +205,19 @@ class TaxiGridEnv(gym.Env):
                 "color": npc_color
             })
     
+    def continuous_to_discrete_action(self, continuous_action):
+        discrete_actions = []
+        for action in continuous_action:
+            # Map continuous [-1, 1] to discrete action space (0, 1, 2, 3, 4)
+            discrete_action = int(np.clip((action + 1) * (len(Actions) - 1) / 2, 0, len(Actions) - 1))
+            discrete_actions.append(discrete_action)
+        return discrete_actions
+
     def step(self, action):
+        discrete_actions = self.continuous_to_discrete_action(action)
         self._events = [None] * self.agents_number
         for i in range(self.agents_number):
-            agent_action = action[i]
+            agent_action = discrete_actions[i]
             agent_action = Actions(agent_action)
             action_vector = self._action_to_vector[agent_action]
             new_location = self._agents[i]["location"] + action_vector
