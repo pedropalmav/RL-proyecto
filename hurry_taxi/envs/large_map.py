@@ -1,9 +1,3 @@
-"""
-1 calle horizontal
-2 calle vertical
-3 cruce
-"""
-
 large_map = [
     [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
     [1,0,0,0,1,0,0,0,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,1],
@@ -32,12 +26,6 @@ large_map = [
     [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
 ]
 
-def show_grid_map(n=25):
-    # Print the grid to the console
-    print("\n" + "-" * (n* 2 + 1))
-    for row in large_map:
-        print("|" + " ".join([' ' if x==0 else 'C' for x in row]) + "|")
-    print("-" * (n * 2 + 1))
-
 if __name__ == "__main__":
+    from hurry_taxi.utils.show_map import show_grid_map
     show_grid_map()

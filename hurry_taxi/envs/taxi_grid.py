@@ -7,6 +7,8 @@ from enum import Enum
 
 from hurry_taxi.utils.guaussian import Gaussian2D
 from hurry_taxi.utils.position_randomizer import PositionRandomizer
+from hurry_taxi.envs.small_map import small_map
+from hurry_taxi.envs.medium_map import medium_map
 from hurry_taxi.envs.large_map import large_map
 
 
@@ -78,9 +80,9 @@ class TaxiGridEnv(gym.Env):
     def _load_map(self):
         match self.grid_size:
             case 5:
-                self.map = large_map
+                self.map = small_map
             case 10:
-                self.map = large_map
+                self.map = medium_map
             case 25:
                 self.map = large_map
             case _:
