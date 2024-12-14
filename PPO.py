@@ -29,6 +29,6 @@ env = Monitor(env, filename=os.path.join("logs", filename))
 obs, info = env.reset()
 
 
-model = PPO("MlpPolicy", env, verbose=1)
+model = PPO("MlpPolicy", env, verbose=1, gamma=0.9)
 model.learn(total_timesteps=25*args.steps, log_interval=10)
 model.save(os.path.join("models", filename))
