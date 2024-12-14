@@ -13,7 +13,7 @@ parser.add_argument("--agents", type=int, default=4, required=False)
 parser.add_argument("--npcs", type=int, default=4, required=False)
 args = parser.parse_args()
 
-filename = f"sac_{args.steps}_{args.agents}_{args.npcs}"
+filename = f"sac_{args.size}_{args.steps}_{args.agents}_{args.npcs}"
 
 env = gym.make(
     "hurry_taxi/TaxiGrid-v0", 
