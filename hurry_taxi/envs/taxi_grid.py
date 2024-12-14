@@ -346,9 +346,9 @@ class TaxiGridEnv(gym.Env):
             case Events.takes_passenger:
                 return 1
             case Events.leaves_passenger:
-                return 2
-            case Events.collision:
-                return -2
+                return 1
+            # case Events.collision:
+            #     return -2
             case _:
                 return 0
 
