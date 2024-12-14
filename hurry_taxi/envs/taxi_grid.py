@@ -7,7 +7,7 @@ from enum import Enum
 
 from hurry_taxi.utils.guaussian import Gaussian2D
 from hurry_taxi.utils.position_randomizer import PositionRandomizer
-from hurry_taxi.envs.map import map
+from hurry_taxi.envs.large_map import large_map
 
 
 class Actions(Enum):
@@ -31,18 +31,14 @@ class Events(Enum):
 class TaxiGridEnv(gym.Env):
     metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 4}
 
-    def __init__(self, render_mode=None, max_steps=1000, agents_number=2, npc_number=4):
-        self.grid_size = 25
+    def __init__(self, render_mode=None, grid_size=25, max_steps=1000, agents_number=2, npc_number=4):
+        self.grid_size = grid_size
         self.window_size = 1024
         self.max_steps = max_steps
         self.agents_number = agents_number
         self.max_passengers = 2 * self.agents_number
         self.number_of_npcs = npc_number
         self.npcs = None
-        # TODO: refactorizar para utilizar numpy
-        self.map = map
-        # Up, Down, Left, Right
-        # self.action_space = spaces.MultiDiscrete([5] * self.agents_number)
         self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(self.agents_number,), dtype=np.float32)
 
         
@@ -75,9 +71,21 @@ class TaxiGridEnv(gym.Env):
             Directions.west: 90,
         }
 
-
+        self._load_map()
         self._init_randomizers()
         self._init_visualization(render_mode)
+
+    def _load_map(self):
+        match self.grid_size:
+            case 5:
+                self.map = large_map
+            case 10:
+                self.map = large_map
+            case 25:
+                self.map = large_map
+            case _:
+                raise ValueError("Invalid grid size")
+
     
     def _init_randomizers(self):
         self.randomizer = PositionRandomizer(self.grid_size)

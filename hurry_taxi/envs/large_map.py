@@ -4,7 +4,7 @@
 3 cruce
 """
 
-map = [
+large_map = [
     [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
     [1,0,0,0,1,0,0,0,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,1],
     [1,0,0,0,1,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,0,0,0,0,1],
@@ -35,7 +35,7 @@ map = [
 def show_grid_map(n=25):
     # Print the grid to the console
     print("\n" + "-" * (n* 2 + 1))
-    for row in map:
+    for row in large_map:
         print("|" + " ".join([' ' if x==0 else 'C' for x in row]) + "|")
     print("-" * (n * 2 + 1))
 
