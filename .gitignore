@@ -1,3 +1,9 @@
+# Project Specific
+logs/*
+models/*
+!logs/.gitkeep
+!models/.gitkeep
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
