@@ -1,11 +1,11 @@
 from plotter import Plotter
 from logs_loader import LogsLoader
 
-models = ['ppo']
-size = 10
+models = ["ppo"]
+size = 5
 steps = [5000]
-agents = [2]
-npcs = [2]
+agents = [1]
+npcs = [0]
 
 for step in steps:
     for agent in agents:
