@@ -30,12 +30,13 @@ if __name__ == "__main__":
             npc_number=args.npcs,
             grid_size=args.size,
         )
-        return Monitor(env, filename=os.path.join("logs", filename))
+        return env
 
     env = make_vec_env(
         make_env,
-        n_envs=1,
+        n_envs=8,
         vec_env_cls=SubprocVecEnv,
+        monitor_dir="logs",
     )
 
     model = PPO("MlpPolicy", env, verbose=1, gamma=0.99, device="cpu")
