@@ -32,7 +32,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     model_name = f"ppo_{args.size}_{args.steps}_{args.agents}_{args.npcs}"
-    folder_name = os.path.join("models", model_name)
+    folder_name = os.path.join("logs", model_name)
     os.makedirs(folder_name, exist_ok=True)
 
     env = make_vec_env(
@@ -43,5 +43,5 @@ if __name__ == "__main__":
     )
 
     model = PPO("MlpPolicy", env, verbose=1, gamma=0.99, device="cpu")
-    model.learn(total_timesteps=2000000, log_interval=10)
+    model.learn(total_timesteps=100000, log_interval=10)
     model.save(os.path.join("models", model_name))
