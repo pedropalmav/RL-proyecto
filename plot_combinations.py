@@ -12,6 +12,7 @@ for step in steps:
     for agent in agents:
         for npc in npcs:
             logs = LogsLoader.load_vectorized_logs("ppo", size, step, agent, npc)
+
             data = pd.concat(logs, keys=range(len(logs)), names=["agent", "episode"])
             data.reset_index(inplace=True)
             Plotter.line_plot_with_bands(data, size, step, agent, npc)

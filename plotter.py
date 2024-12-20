@@ -23,18 +23,19 @@ class Plotter:
         mean_rewards = grouped["r"].mean()
         std_rewards = grouped["r"].std()
 
+        training_steps = (mean_rewards.index + 1) * steps
+
         plt.figure(figsize=(10, 6))
-        plt.plot(mean_rewards)
-        # TODO: fix this
+        plt.plot(training_steps, mean_rewards)
         plt.fill_between(
-            mean_rewards.index,
+            training_steps,
             mean_rewards - std_rewards,
             mean_rewards + std_rewards,
             alpha=0.2,
         )
-        plt.xlabel("Episodes")
+        plt.xlabel("Training Steps")
         plt.ylabel("Return")
-        plt.show()
+        plt.savefig(os.path.join("imgs", f"return_{size}_{steps}_{agents}_{npcs}.png"))
 
 
 if __name__ == "__main__":

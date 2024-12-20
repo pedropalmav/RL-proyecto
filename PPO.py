@@ -37,11 +37,11 @@ if __name__ == "__main__":
 
     env = make_vec_env(
         make_env,
-        n_envs=8,
+        n_envs=16,
         vec_env_cls=SubprocVecEnv,
         monitor_dir=folder_name,
     )
 
     model = PPO("MlpPolicy", env, verbose=1, gamma=0.99, device="cpu")
-    model.learn(total_timesteps=100000, log_interval=10)
+    model.learn(total_timesteps=1000000, log_interval=10)
     model.save(os.path.join("models", model_name))
