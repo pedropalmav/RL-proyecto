@@ -43,5 +43,5 @@ if __name__ == "__main__":
     )
 
     model = PPO("MlpPolicy", env, verbose=1, gamma=0.99, device="cpu")
-    model.learn(total_timesteps=1000000, log_interval=10)
+    model.learn(total_timesteps=10000000, log_interval=10)
     model.save(os.path.join("models", model_name))
