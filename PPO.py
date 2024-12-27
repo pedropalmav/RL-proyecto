@@ -42,6 +42,9 @@ if __name__ == "__main__":
         monitor_dir=folder_name,
     )
 
-    model = PPO("MlpPolicy", env, verbose=1, gamma=0.99, device="cpu")
+    # TODO: Correr este modelo
+    model = PPO(
+        "MlpPolicy", env, verbose=1, gamma=0.99, learning_rate=0.0001, device="cpu"
+    )
     model.learn(total_timesteps=10000000, log_interval=10)
     model.save(os.path.join("models", model_name))
