@@ -42,7 +42,6 @@ if __name__ == "__main__":
         monitor_dir=folder_name,
     )
 
-    # TODO: Correr este modelo
     model = PPO(
         "MlpPolicy", env, verbose=1, gamma=0.99, learning_rate=0.0001, device="cpu"
     )
