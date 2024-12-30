@@ -43,7 +43,13 @@ if __name__ == "__main__":
     )
 
     model = PPO(
-        "MlpPolicy", env, verbose=1, gamma=0.99, learning_rate=0.0001, device="cpu"
+        "MlpPolicy",
+        env,
+        verbose=1,
+        gamma=0.99,
+        learning_rate=0.0001,
+        device="cpu",
+        policy_kwargs=dict(net_arch=[256, 256]),
     )
     model.learn(total_timesteps=10000000, log_interval=10)
     model.save(os.path.join("models", model_name))
