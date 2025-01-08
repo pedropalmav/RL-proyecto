@@ -47,7 +47,7 @@ if __name__ == "__main__":
         env,
         verbose=1,
         gamma=0.99,
-        learning_rate=0.0001,
+        learning_rate=0.00001,
         device="cpu",
         policy_kwargs=dict(net_arch=[256, 256]),
     )
