@@ -3,7 +3,7 @@ from logs_loader import LogsLoader
 import pandas as pd
 
 models = ["ppo"]
-size = 5
+size = 10
 steps = [5000]
 agents = [1]
 npcs = [0]
