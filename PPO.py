@@ -51,5 +51,5 @@ if __name__ == "__main__":
         device="cpu",
         policy_kwargs=dict(net_arch=[256, 256]),
     )
-    model.learn(total_timesteps=10000000, log_interval=10)
+    model.learn(total_timesteps=15000000, log_interval=10)
     model.save(os.path.join("models", model_name))
